@@ -5,6 +5,8 @@ const { clipboard, desktopCapturer, dialog, globalShortcut, Notification, screen
 const fs = require('fs');
 const path = require('path');
 const games = require('./system/games');
+const { Covers } = require('./system/covers');
+const { pathToFileURL } = require('url');
 
 function setup(ctx) {
   const { app, handle, log, sys, phone, MOCK, iconPath } = ctx;
@@ -33,10 +35,32 @@ function setup(ctx) {
   let current = null; // sessione di gioco in corso
   let library = null;
 
+  const covers = new Covers(path.join(userDir, 'covers'), log);
+  const toUrl = (p) => (!p || p.startsWith('data:') ? p : pathToFileURL(p).href);
+  const view = (g) => {
+    const c = covers.lookup(g.id);
+    // la copertina scelta da te vince sempre; quella scaricata solo se il PC non ne ha una
+    if (c && (c.custom || !g.cover || g.icon)) return { ...g, cover: toUrl(c.cover), icon: false, wide: c.wide, customCover: c.custom };
+    return { ...g, cover: toUrl(g.cover) };
+  };
+  const fillCovers = () => {
+    if (MOCK || !library) return;
+    covers.fill(library, { sgdbKey: (S().steamGridDbKey || '').trim(), onDone: (n) => { log(`copertine: ${n} scaricate`); send('games:covers', n); } }).catch((e) => log(`copertine: ${e.message}`));
+  };
+
   handle('games:list', async (force) => {
     if (!library || force) library = MOCK ? require('../test/fake-system').fakeGames() : await games.scanAll(S().customGames || []);
-    return library.map((g) => ({ ...g, cover: g.cover && !g.cover.startsWith('data:') ? `file:///${g.cover.replace(/\\/g, '/')}` : g.cover }));
+    setTimeout(fillCovers, 500);
+    return library.map(view);
   });
+  handle('games:setCover', async (id) => {
+    const r = await dialog.showOpenDialog(ctx.getWin(), { title: 'Scegli la copertina', filters: [{ name: 'Immagini', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }], properties: ['openFile'] });
+    if (r.canceled || !r.filePaths[0]) return { ok: true, changed: false };
+    covers.setCustom(id, r.filePaths[0]);
+    return { ok: true, changed: true };
+  });
+  handle('games:clearCover', async (id) => { covers.clearCustom(id); return { ok: true }; });
+  handle('games:retryCovers', async () => { covers.forgetMisses(); fillCovers(); return { ok: true }; });
   handle('games:launch', async (id) => {
     const g = (library || []).find((x) => x.id === id);
     if (!g) return { ok: false, error: 'Gioco non trovato, aggiorna la libreria' };

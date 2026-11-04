@@ -58,6 +58,14 @@
           <div class="quick" id="quick-keyboard"></div>
         </article>
       </div>
+      <div class="pulse glass" id="pulse" data-go="system" title="Apri Sistema">
+        <span><i>CPU</i><b id="pu-cpu">—</b></span>
+        <span><i>GPU</i><b id="pu-gpu">—</b></span>
+        <span><i>Temp. GPU</i><b id="pu-temp">—</b></span>
+        <span><i>RAM</i><b id="pu-ram">—</b></span>
+        <span><i>Rete</i><b id="pu-net">—</b></span>
+        <span class="pu-next" id="pu-next" data-go="tools"><i>Prossimo promemoria</i><b id="pu-rem">nessuno</b></span>
+      </div>
       <div class="home-row">
         <div class="card glass">
           <div class="card-head"><div><h3>Profili</h3><p class="muted" id="profile-note">Un clic cambia energia, EQ, luci e overlay insieme.</p></div><a href="#" class="muted" data-settings-tab="profiles">Modifica</a></div>
@@ -403,7 +411,7 @@
       </div>
       <div class="tab-body" id="games-body">
         <div class="tab on" data-tab="lib">
-          <div class="row lib-tools"><input type="text" id="games-search" placeholder="Cerca un gioco…"><span class="grow"></span><button class="btn ghost" id="games-add">Aggiungi gioco</button><button class="btn ghost" id="games-scan">Aggiorna</button></div>
+          <div class="row lib-tools"><input type="text" id="games-search" placeholder="Cerca un gioco…"><span class="grow"></span><button class="btn ghost" id="games-covers">Copertine</button><button class="btn ghost" id="games-add">Aggiungi gioco</button><button class="btn ghost" id="games-scan">Aggiorna</button></div>
           <div id="games-grid" class="games-grid"><p class="muted">Cerco i giochi in Steam, Epic, Riot e Prism Launcher…</p></div>
         </div>
         <div class="tab" data-tab="sessions">
@@ -482,9 +490,10 @@
             <div class="card glass tile"><div class="tile-head"><h3>PC</h3><b class="big-num small" id="r-up">—</b></div><dl class="facts small" id="r-pc-facts"></dl></div>
           </div>
           <div class="card glass">
-            <div class="card-head"><div><h3>Overlay in gioco</h3><p class="muted">Un riquadro sempre in primo piano con CPU, GPU, temperature e RAM. Scorciatoia: <kbd>Ctrl</kbd>+<kbd>Maiusc</kbd>+<kbd>O</kbd>. Si vede sopra i giochi in finestra o "a schermo intero senza bordi"; per gli FPS usa l'overlay NVIDIA (<kbd>Alt</kbd>+<kbd>R</kbd>).</p></div>
+            <div class="card-head"><div><h3>Overlay in gioco</h3><p class="muted">Un riquadro sempre in primo piano con CPU, GPU, temperature, RAM, batteria di mouse e cuffie e ora. Scorciatoia: <kbd>Ctrl</kbd>+<kbd>Maiusc</kbd>+<kbd>O</kbd>. Si vede sopra i giochi in finestra o "a schermo intero senza bordi"; per gli FPS usa l'overlay NVIDIA (<kbd>Alt</kbd>+<kbd>R</kbd>).</p></div>
               <label class="switch"><input type="checkbox" id="ov-on"><span></span></label></div>
             <div class="chips" id="ov-corner"><button data-v="tl">In alto a sinistra</button><button data-v="tr">In alto a destra</button><button data-v="bl">In basso a sinistra</button><button data-v="br">In basso a destra</button></div>
+            <label class="switch inline spaced"><input type="checkbox" id="ov-game"><span></span>Mostralo solo mentre giochi (con un gioco riconosciuto aperto)</label>
           </div>
         </div>
         <div class="tab" data-tab="procs">

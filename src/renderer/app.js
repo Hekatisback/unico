@@ -177,7 +177,7 @@ function renderEmpty(k, s) {
 
 function summary(k, s) {
   if (!s || !s.connected) return k === 'headset' && s && s.cableOff ? 'Cavo collegato, cuffie spente' : 'Non collegato';
-  if (s.asleep) return 'In standby';
+  if (s.asleep) return s.lastBattery ? `In standby · ultima lettura alle ${new Date(s.lastBattery.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : 'In standby';
   if (s.off) return 'Cuffie spente';
   const p = [];
   if (k === 'mouse') { if (s.dpi) p.push(`${s.dpi} DPI`); if (s.pollRate) p.push(`${s.pollRate} Hz`); }
@@ -191,9 +191,13 @@ function render() {
     const s = S[k];
     const ring = $(`#ring-${k}`);
     const has = s && typeof s.battery === 'number';
-    ring.style.setProperty('--p', has ? s.battery : 0);
-    ring.style.setProperty('--c', has ? batteryColor(s.battery) : 'transparent');
-    $('span', ring).textContent = has ? `${s.battery}%` : '—';
+    const lb = !has && s && s.lastBattery && Date.now() - s.lastBattery.at < 3 * 86400000 ? s.lastBattery : null;
+    const pct = has ? s.battery : lb ? lb.percent : null;
+    ring.style.setProperty('--p', pct != null ? pct : 0);
+    ring.style.setProperty('--c', pct != null ? batteryColor(pct) : 'transparent');
+    ring.classList.toggle('stale', !!lb);
+    ring.title = lb ? `Ultima lettura: ${new Date(lb.at).toLocaleString('it-IT', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}` : '';
+    $('span', ring).textContent = pct != null ? `${pct}%` : '—';
     $(`#sum-${k}`).textContent = summary(k, s);
     const chip = $(`#chip-${k}`);
     chip.className = `chip ${online(s) ? 'on' : s && s.connected ? 'sleep' : ''}`;

@@ -201,7 +201,7 @@ function renderGames() {
   }
   $('#games-grid').innerHTML = list.map((g) => `
     <div class="game glass" data-id="${esc(g.id)}">
-      <div class="gcover" data-h="${hue(g.name)}">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy"${g.icon ? ' class="icon"' : ''}>` : `<span>${esc(initials(g.name))}</span>`}</div>
+      <div class="gcover" data-h="${hue(g.name)}">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy"${g.icon ? ' class="icon"' : g.wide ? ' class="wide"' : ''}>` : `<span>${esc(initials(g.name))}</span>`}</div>
       <div class="game-info"><b title="${esc(g.name)}">${esc(g.name)}</b><small>${esc(g.source)}${played[g.id] ? ` · ${ago(played[g.id])}` : ''}</small></div>
       <button class="play" title="Gioca">${ICON.play}</button>
       ${g.id.startsWith('custom:') ? `<button class="icon-btn rm" title="Togli dalla libreria">${ICON.x}</button>` : ''}
@@ -215,6 +215,45 @@ async function loadGames(force = false) {
   renderGames();
 }
 $('#games-search').addEventListener('input', renderGames);
+api.on('games:covers', () => { if (currentPage === 'games') loadGames(false); else gameList = []; });
+
+// Clic destro su un gioco: scegli una copertina tua o torna a quella automatica.
+const gameMenu = document.createElement('div');
+gameMenu.className = 'ctx-menu glass';
+document.body.appendChild(gameMenu);
+const hideGameMenu = () => gameMenu.classList.remove('show');
+document.addEventListener('click', hideGameMenu);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideGameMenu(); });
+$('#games-grid').addEventListener('contextmenu', (e) => {
+  const card = e.target.closest('.game');
+  if (!card) return;
+  e.preventDefault();
+  const g = gameList.find((x) => x.id === card.dataset.id);
+  gameMenu.innerHTML = `<button data-m="set">Scegli copertina…</button>${g && g.customCover ? '<button data-m="clear">Copertina automatica</button>' : ''}`;
+  gameMenu.style.left = `${Math.min(e.clientX, innerWidth - 220)}px`;
+  gameMenu.style.top = `${Math.min(e.clientY, innerHeight - 100)}px`;
+  gameMenu.dataset.id = card.dataset.id;
+  gameMenu.classList.add('show');
+});
+gameMenu.addEventListener('click', async (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const id = gameMenu.dataset.id;
+  hideGameMenu();
+  if (b.dataset.m === 'set') { const r = await act(null, () => api.gamesSetCover(id)); if (r && r.changed) { await loadGames(false); toast('Copertina aggiornata'); } }
+  if (b.dataset.m === 'clear') { await api.gamesClearCover(id); await loadGames(false); }
+});
+$('#games-covers').onclick = async () => {
+  const ok = await confirmBox('Copertine dei giochi', 'Unico le scarica da Steam e Wikipedia. Per i giochi che non sono su Steam (Riot, Epic…) puoi aggiungere una chiave gratuita di SteamGridDB: crea un account su steamgriddb.com → Preferenze → API, copia la chiave e incollala qui.', {
+    yes: 'Salva e cerca di nuovo',
+    extra: `<input type="text" id="sgdb-key" placeholder="Chiave API SteamGridDB (facoltativa)" value="${esc(CFG.steamGridDbKey || '')}">`,
+  });
+  if (!ok) return;
+  await api.saveSettings({ steamGridDbKey: ($('#sgdb-key') || {}).value || '' });
+  CFG.steamGridDbKey = ($('#sgdb-key') || {}).value || '';
+  await api.gamesRetryCovers();
+  toast('Cerco le copertine in sottofondo: compaiono da sole');
+};
 $('#games-scan').onclick = (e) => act(e.target, () => loadGames(true), 'Libreria aggiornata');
 $('#games-add').onclick = async (e) => { const r = await act(e.target, () => api.gamesAddCustom()); if (r && r.added) { await loadGames(true); toast('Gioco aggiunto'); } };
 $('#games-grid').addEventListener('click', async (e) => {
@@ -416,8 +455,39 @@ $('#bk-import').onclick = async (e) => {
 // =============================================================================
 // Avvio
 // =============================================================================
+$('#ov-game').addEventListener('change', () => act(null, () => api.overlaySet({ gameOnly: $('#ov-game').checked }), $('#ov-game').checked ? 'L\'overlay comparirà quando apri un gioco' : 'Overlay sempre visibile quando è attivo'));
+
+// =============================================================================
+// Home: risorse in tempo reale e prossimo promemoria
+// =============================================================================
+function renderPulse(s) {
+  if (!s || currentPage !== 'home') return;
+  $('#pu-cpu').textContent = `${s.cpu.total}%`;
+  $('#pu-gpu').textContent = s.gpu ? `${Math.round(s.gpu.util)}%` : '—';
+  const t = s.gpu && s.gpu.temp != null ? Math.round(s.gpu.temp) : null;
+  $('#pu-temp').textContent = t != null ? `${t} °C` : '—';
+  $('#pu-temp').className = t >= 85 ? 'hot' : t >= 75 ? 'warm' : '';
+  $('#pu-ram').textContent = `${s.ram.pct}%`;
+  $('#pu-net').textContent = s.net ? `↓ ${fmtRate(s.net.rx)}` : '—';
+}
+function renderNextReminder() {
+  const next = (remItems || []).filter((r) => !r.done && r.at > Date.now()).sort((a, b) => a.at - b.at)[0];
+  $('#pu-rem').textContent = !next ? 'nessuno' : next.kind === 'timer' ? `${next.text || 'Timer'} · tra ${left(next.at)}` : `${next.text} · ${whenText(next.at)}`;
+}
+api.onStats(renderPulse);
+const homeHookBase = pageHooks.home;
+let pulseTick = null;
+pageHooks.home = (on) => {
+  homeHookBase(on);
+  clearInterval(pulseTick);
+  api.sysWatch(on);
+  if (on) { api.remList().then((r) => { remItems = r; renderNextReminder(); }); pulseTick = setInterval(renderNextReminder, 1000); }
+};
+api.on('reminders', () => renderNextReminder());
+
 function moreInit() {
   if (!CFG || !tabs.audio) return setTimeout(moreInit, 100);
+  $('#ov-game').checked = !!(CFG.overlay && CFG.overlay.gameOnly);
   $('#clip-on').checked = !(CFG.clipboard && CFG.clipboard.enabled === false);
   $('#cap-audio').checked = !(CFG.capture && CFG.capture.audio === false);
   $('#pn-on').checked = !!(CFG.phoneNotif && CFG.phoneNotif.enabled);

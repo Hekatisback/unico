@@ -14,5 +14,10 @@ window.unico.onStats((s) => {
     $('#power').textContent = s.gpu.power != null ? `${Math.round(s.gpu.power)} W` : '';
   }
   $('#ram').textContent = `${s.ram.pct}%  ${(s.ram.used / 1073741824).toFixed(1)} GB`;
+  const d = s.devices || {};
+  const parts = [d.mouse != null ? `🖱 ${d.mouse}%` : null, d.headset != null ? `🎧 ${d.headset}%` : null].filter(Boolean);
+  $('#batRow').hidden = !parts.length;
+  $('#bat').textContent = parts.join('  ');
+  heat($('#bat'), Math.min(d.mouse ?? 100, d.headset ?? 100) <= 15 ? 99 : null, 80, 90);
   $('#clock').textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 });

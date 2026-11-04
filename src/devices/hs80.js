@@ -141,17 +141,20 @@ class Hs80 {
   }
 
   async batteryPercent() {
-    // Due letture concordi: se un altro programma interroga le cuffie le risposte si mescolano.
-    let last = null;
-    for (let i = 0; i < 4; i++) {
+    // Letture ripetute: con le luci gestite da Unico (o un altro programma aperto) qualche risposta
+    // si mescola. Due letture concordi bastano; altrimenti si usa la mediana di quelle valide.
+    const vals = [];
+    for (let i = 0; i < 5; i++) {
       const r = await this.ask(req.get(this.target, PROP.BATTERY), { quiet: i > 0 });
-      if (!r.value) return r;
+      if (!r.value) { if (vals.length) break; return r; }
       const v = (r.value[0] | (r.value[1] << 8)) / 10;
-      if (v <= 0 || v > 100) return { off: true };
-      if (last !== null && Math.abs(v - last) <= 2) return { percent: Math.round(v) };
-      last = v;
+      if (v <= 0 || v > 100) { if (vals.length) continue; return { off: true }; }
+      if (vals.some((x) => Math.abs(x - v) <= 2)) return { percent: Math.round(v) };
+      vals.push(v);
     }
-    return { error: 'letture discordanti (iCUE è aperto?)' };
+    if (!vals.length) return { error: 'nessuna lettura valida' };
+    vals.sort((a, b) => a - b);
+    return { percent: Math.round(vals[Math.floor(vals.length / 2)]) };
   }
 
   async battery() {

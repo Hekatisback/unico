@@ -495,3 +495,19 @@ body.recording .rec-state i { background: var(--bad); box-shadow: 0 0 8px var(--
   .dock button { min-width: 48px; padding: 9px 8px 7px; }
 }
 .game .gcover img.icon { width: 46%; height: auto; aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 8px 18px rgba(0,0,0,.35)); }
+.ring.stale { opacity: .55; }
+.game .gcover img.wide { object-fit: cover; object-position: center; }
+.ctx-menu { position: fixed; z-index: 60; display: none; flex-direction: column; min-width: 200px; padding: 6px; border-radius: 16px; }
+.ctx-menu.show { display: flex; }
+.ctx-menu button { all: unset; padding: 9px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+.ctx-menu button:hover { background: var(--field); }
+#modal-extra input[type=text] { width: 100%; margin-top: 10px; }
+.pulse { display: flex; flex-wrap: wrap; gap: 6px 26px; align-items: center; padding: 14px 22px; border-radius: 22px; margin: 18px 0; cursor: pointer; transition: box-shadow .2s; }
+.pulse:hover { box-shadow: var(--shadow), 0 0 0 1.5px var(--accent); }
+.pulse span { display: flex; flex-direction: column; gap: 1px; }
+.pulse i { font-style: normal; font-size: 11.5px; color: var(--muted); }
+.pulse b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.pulse b.warm { color: var(--warn); }
+.pulse b.hot { color: var(--bad); }
+.pulse .pu-next { margin-left: auto; text-align: right; max-width: 40%; }
+.pulse .pu-next b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

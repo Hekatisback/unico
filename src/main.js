@@ -50,13 +50,14 @@ const DEFAULTS = {
   startHidden: true,
   appearance: { background: 'acrylic', theme: 'system', v: 2 },
   alerts: { enabled: true, gpuTemp: 87, ram: 92, diskGB: 10 },
-  overlay: { enabled: false, corner: 'tl', shortcut: 'CommandOrControl+Shift+O' },
+  overlay: { enabled: false, corner: 'tl', shortcut: 'CommandOrControl+Shift+O', gameOnly: false },
   capture: { audio: true, shotKey: 'Control+Alt+S', recKey: 'Control+Alt+R' },
   clipboard: { enabled: true },
   reminders: [],
   customGames: [],
   lastPlayed: {},
   gamesProfile: true,
+  steamGridDbKey: '',
   phoneNotif: { enabled: false, serial: null, muted: [] },
   profiles: DEFAULT_PROFILES,
   autoProfile: DEFAULT_AUTO,
@@ -117,18 +118,30 @@ let overlayWin = null;
 function onStats(s) {
   feat.onSample && feat.onSample(s);
   if (win && !win.isDestroyed() && win.isVisible()) win.webContents.send('stats', { ...s, history: sys.history });
-  if (overlayWin && !overlayWin.isDestroyed()) overlayWin.webContents.send('stats', s);
+  if (overlayWin && !overlayWin.isDestroyed()) {
+    const bat = (k) => { const d = state[k] || {}; return typeof d.battery === 'number' ? d.battery : d.lastBattery ? d.lastBattery.percent : null; };
+    overlayWin.webContents.send('stats', { ...s, devices: { mouse: bat('mouse'), headset: bat('headset') } });
+  }
 }
 
 function overlayBounds() {
   const wa = screen.getPrimaryDisplay().workArea;
-  const w = 210, h = 128, m = 12;
+  const w = 210, h = 150, m = 12;
   const c = settings.overlay.corner || 'tl';
   return { width: w, height: h, x: c.endsWith('l') ? wa.x + m : wa.x + wa.width - w - m, y: c.startsWith('t') ? wa.y + m : wa.y + wa.height - h - m };
 }
+let gameRunning = null;
 function setOverlay(on) {
   settings.overlay.enabled = !!on;
   saveSettings();
+  syncOverlay();
+  state.overlay = settings.overlay.enabled;
+  if (win && !win.isDestroyed()) win.webContents.send('overlay', settings.overlay);
+  return { ok: true, enabled: settings.overlay.enabled };
+}
+// Con "solo in gioco" il riquadro compare quando parte un gioco riconosciuto e sparisce alla chiusura.
+function syncOverlay() {
+  const on = settings.overlay.enabled && (!settings.overlay.gameOnly || !!gameRunning);
   if (on && (!overlayWin || overlayWin.isDestroyed())) {
     overlayWin = new BrowserWindow({
       ...overlayBounds(), frame: false, transparent: true, resizable: false, movable: false, focusable: false,
@@ -145,9 +158,6 @@ function setOverlay(on) {
     overlayWin = null;
     sys.want('overlay', false);
   } else if (on && overlayWin) overlayWin.setBounds(overlayBounds());
-  state.overlay = settings.overlay.enabled;
-  if (win && !win.isDestroyed()) win.webContents.send('overlay', settings.overlay);
-  return { ok: true, enabled: settings.overlay.enabled };
 }
 function registerShortcut() {
   try { globalShortcut.unregisterAll(); globalShortcut.register(settings.overlay.shortcut, () => setOverlay(!settings.overlay.enabled)); } catch (e) { log(`scorciatoia: ${e.message}`); }
@@ -235,6 +245,7 @@ async function watchGames() {
   try { names = await sys.procNames(); } catch (e) { return; }
   const game = detectGame(names, A.games);
   if (feat.onGame) feat.onGame(game);
+  if (!!game !== !!gameRunning) { gameRunning = game; if (settings.overlay.gameOnly) syncOverlay(); }
   if (!A.enabled) return;
   if (game && !autoState.game) {
     autoState = { game, previous: settings.activeProfile && settings.activeProfile !== 'gioco' ? settings.activeProfile : null };
@@ -253,7 +264,20 @@ let win = null;
 let tray = null;
 let quitting = false;
 
+// Ultima batteria letta: se il mouse va in standby o la lettura fallisce, la Home mostra quella.
+const lastBattery = {};
+function rememberBatteries() {
+  for (const k of ['mouse', 'headset', 'keyboard']) {
+    const d = state[k];
+    if (!d) continue;
+    if (typeof d.battery === 'number') lastBattery[k] = { percent: d.battery, at: Date.now() };
+    else if (lastBattery[k] || (settings.lastBattery && settings.lastBattery[k])) d.lastBattery = lastBattery[k] || settings.lastBattery[k];
+  }
+  const keep = JSON.stringify(lastBattery);
+  if (keep !== rememberBatteries.saved && Object.keys(lastBattery).length) { rememberBatteries.saved = keep; settings.lastBattery = { ...(settings.lastBattery || {}), ...lastBattery }; saveSettings(); }
+}
 function push() {
+  rememberBatteries();
   state.updated = Date.now();
   if (win && !win.isDestroyed()) win.webContents.send('state', state);
   updateTray();
@@ -379,6 +403,23 @@ function createTray() {
   ]));
   tray.on('click', showWindow);
   updateTray();
+}
+
+// Toglie dall'avvio automatico le voci di vecchie copie di Unico (es. la versione zip in Documenti).
+function cleanOldStartup() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  const key = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
+  execFile('reg.exe', ['query', key], { windowsHide: true, timeout: 8000 }, (err, out) => {
+    if (err) return;
+    const mine = path.dirname(process.execPath).toLowerCase();
+    for (const line of String(out).split(/\r?\n/)) {
+      const m = line.match(/^ {4}(.+?) {4}REG_\w+ {4}(.*)$/);
+      if (!m || !/unico\.exe/i.test(m[2])) continue;
+      const exe = (m[2].match(/"([^"]+unico\.exe)"/i) || m[2].match(/(\S+unico\.exe)/i) || [])[1];
+      if (!exe || path.dirname(exe).toLowerCase() === mine) continue;
+      execFile('reg.exe', ['delete', key, '/v', m[1], '/f'], { windowsHide: true }, (e) => log(`avvio: tolta la voce di una vecchia copia (${m[1]} → ${exe})${e ? ' non riuscito: ' + e.message : ''}`));
+    }
+  });
 }
 
 function applyLoginItem() {
@@ -510,6 +551,7 @@ handle('sys:brightness', async () => sys.brightness());
 handle('sys:setBrightness', async ({ id, value }) => { await sys.setBrightness(id, value); return { ok: true }; });
 handle('overlay:set', async (patch) => {
   if (patch && patch.corner) settings.overlay.corner = patch.corner;
+  if (patch && patch.gameOnly !== undefined) settings.overlay.gameOnly = !!patch.gameOnly;
   return setOverlay(patch && patch.enabled !== undefined ? patch.enabled : settings.overlay.enabled);
 });
 handle('profile:activate', async (id) => activateProfile(id));
@@ -608,6 +650,7 @@ app.whenReady().then(async () => {
   app.setAppUserModelId('it.hekat.unico');
   log(`--- avvio Unico ${app.getVersion()} (electron ${process.versions.electron}, hidapi ${safe(() => HID.getHidapiVersion())})`);
   applyLoginItem();
+  setTimeout(cleanOldStartup, 5000);
   createTray();
   const hidden = process.argv.includes('--hidden') && settings.startHidden;
   createWindow(!hidden);

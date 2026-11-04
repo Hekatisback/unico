@@ -6,6 +6,10 @@ const { execFile, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// Senza la ricerca mDNS adb non apre porte in rete, quindi Windows non chiede il permesso del firewall.
+// L'associazione Wi-Fi con indirizzo e codice funziona lo stesso.
+const ADB_ENV = { ...process.env, ADB_MDNS: '0', ADB_MDNS_AUTO_CONNECT: '' };
+
 class Phone {
   constructor({ binDir, log, onChange, videosDir }) {
     this.binDir = binDir;
@@ -21,7 +25,7 @@ class Phone {
 
   adb(args, timeout = 15000) {
     return new Promise((resolve) => {
-      execFile(this.adbPath, args, { cwd: this.binDir, timeout, windowsHide: true }, (err, stdout, stderr) => {
+      execFile(this.adbPath, args, { cwd: this.binDir, timeout, windowsHide: true, env: ADB_ENV }, (err, stdout, stderr) => {
         resolve({ ok: !err, out: String(stdout || ''), err: String(stderr || (err && err.message) || '') });
       });
     });
@@ -74,7 +78,7 @@ class Phone {
     if (this.sessions.has(serial)) return { ok: true, already: true };
     const args = buildArgs(serial, opts, title, this.videosDir);
     this.log(`phone: avvio scrcpy ${args.join(' ')}`);
-    const child = spawn(this.scrcpyPath, args, { cwd: this.binDir, windowsHide: true });
+    const child = spawn(this.scrcpyPath, args, { cwd: this.binDir, windowsHide: true, env: ADB_ENV });
     let errText = '';
     child.stdout.on('data', (d) => this.log(`scrcpy: ${String(d).trim()}`));
     child.stderr.on('data', (d) => { errText += String(d); this.log(`scrcpy: ${String(d).trim()}`); });
