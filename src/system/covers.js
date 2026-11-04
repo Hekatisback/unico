@@ -54,7 +54,9 @@ async function fromSteamSearch(name) {
 }
 async function fromWikipedia(name) {
   for (const lang of ['en', 'it']) {
-    for (const title of [`${name} (video game)`, `${name} (videogioco)`, name]) {
+    const titleCase = name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+    const names = [...new Set([name, titleCase])];
+    for (const title of names.flatMap((n) => [`${n} (video game)`, `${n} (videogioco)`, n])) {
       const d = await getJson(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`).catch(() => null);
       if (!d || d.type === 'disambiguation') continue;
       const desc = `${d.description || ''} ${d.extract || ''}`.toLowerCase();
@@ -67,6 +69,8 @@ async function fromWikipedia(name) {
   }
   return null;
 }
+
+const MISS_V = 2; // cambiando le fonti si riprovano i giochi non trovati
 
 class Covers {
   constructor(dir, log) {
@@ -105,7 +109,7 @@ class Covers {
       for (const g of games) {
         if (g.source === 'Minecraft' || (g.cover && !g.cover.startsWith('data:'))) continue;
         const m = this.meta[g.id];
-        if (m && (m.file || Date.now() - (m.missAt || 0) < 7 * 86400000)) continue;
+        if (m && (m.file || (m.missV === MISS_V && Date.now() - (m.missAt || 0) < 7 * 86400000))) continue;
         let img = null;
         const name = g.name.replace(/\s*\(.*?\)\s*$/, '');
         try {
@@ -120,7 +124,7 @@ class Covers {
           fs.writeFileSync(path.join(this.dir, file), img.buf);
           this.meta[g.id] = { file, wide: img.wide, at: Date.now() };
           got++;
-        } else this.meta[g.id] = { missAt: Date.now() };
+        } else this.meta[g.id] = { missAt: Date.now(), missV: MISS_V };
         this.save();
       }
     } finally { this.running = false; }

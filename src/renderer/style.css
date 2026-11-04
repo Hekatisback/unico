@@ -496,7 +496,7 @@ body.recording .rec-state i { background: var(--bad); box-shadow: 0 0 8px var(--
 }
 .game .gcover img.icon { width: 46%; height: auto; aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 8px 18px rgba(0,0,0,.35)); }
 .ring.stale { opacity: .55; }
-.game .gcover img.wide { object-fit: cover; object-position: center; }
+.game .gcover img.wide { object-fit: contain; padding: 14px; filter: drop-shadow(0 8px 18px rgba(0,0,0,.35)); }
 .ctx-menu { position: fixed; z-index: 60; display: none; flex-direction: column; min-width: 200px; padding: 6px; border-radius: 16px; }
 .ctx-menu.show { display: flex; }
 .ctx-menu button { all: unset; padding: 9px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; }
