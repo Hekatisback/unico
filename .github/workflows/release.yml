@@ -40,6 +40,7 @@ jobs:
           Get-ChildItem vendor/scrcpy
 
       - name: Build e pubblicazione
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win nsis zip --x64 --publish always -c.win.signAndEditExecutable=true
+        run: npx electron-builder --win nsis zip --x64 --publish always --config.win.signAndEditExecutable=true
