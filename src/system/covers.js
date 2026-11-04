@@ -85,7 +85,7 @@ async function fromWikipedia(name) {
 
 const MISS_V = 4;
 // per questi teniamo il logo (su fondo nero nell'interfaccia) invece della copertina
-const KEEP_LOGO = new Set(['riot:league_of_legends', 'riot:valorant']); // cambiando le fonti si riprovano i giochi non trovati
+// cambiando le fonti si riprovano i giochi non trovati
 
 class Covers {
   constructor(dir, log) {
