@@ -81,3 +81,21 @@ test('copertine Steam: formato nuovo in sottocartella e formato vecchio', () => 
   assert.strictEqual(games.steamCover(root, '440'), path.join(lc, '440_library_600x900.jpg'));
   assert.strictEqual(games.steamCover(root, '999'), null);
 });
+
+test('copertine: IGN legge og:image dalla pagina del gioco', async () => {
+  const { fromIgn, slug } = require('../src/system/covers');
+  assert.strictEqual(slug('Legends of Runeterra'), 'legends-of-runeterra');
+  assert.strictEqual(slug('PUBG: BATTLEGROUNDS'), 'pubg-battlegrounds');
+  const orig = global.fetch;
+  const seen = [];
+  global.fetch = async (url) => {
+    seen.push(url);
+    if (url.startsWith('https://www.ign.com/games/')) return { ok: true, text: async () => '<html><meta property="og:image" content="https://assets-prd.ignimgs.com/2022/box.jpg?crop=1&amp;x=2"></html>' };
+    return { ok: true, headers: { get: () => 'image/jpeg' }, arrayBuffer: async () => new Uint8Array(5000).buffer };
+  };
+  try {
+    const img = await fromIgn('Legends of Runeterra');
+    assert.ok(img && img.buf.length === 5000);
+    assert.strictEqual(seen[1], 'https://assets-prd.ignimgs.com/2022/box.jpg?width=600');
+  } finally { global.fetch = orig; }
+});

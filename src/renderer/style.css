@@ -511,3 +511,4 @@ body.recording .rec-state i { background: var(--bad); box-shadow: 0 0 8px var(--
 .pulse b.hot { color: var(--bad); }
 .pulse .pu-next { margin-left: auto; text-align: right; max-width: 40%; }
 .pulse .pu-next b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game .gcover.black { background: #000; }

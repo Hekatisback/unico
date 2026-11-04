@@ -186,6 +186,8 @@ $('#mic-rec').onclick = async () => {
 // Giochi
 // =============================================================================
 let gameList = [];
+// Loghi chiari che stanno meglio su fondo nero
+const BLACK_BG = new Set(['riot:league_of_legends', 'riot:valorant']);
 const SRC_ORDER = ['Steam', 'Epic', 'Riot', 'Minecraft', 'Aggiunto da te'];
 const initials = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 function hue(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
@@ -201,7 +203,7 @@ function renderGames() {
   }
   $('#games-grid').innerHTML = list.map((g) => `
     <div class="game glass" data-id="${esc(g.id)}">
-      <div class="gcover" data-h="${hue(g.name)}">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy"${g.icon ? ' class="icon"' : g.wide ? ' class="wide"' : ''}>` : `<span>${esc(initials(g.name))}</span>`}</div>
+      <div class="gcover${BLACK_BG.has(g.id) ? ' black' : ''}" data-h="${hue(g.name)}">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy"${g.icon ? ' class="icon"' : g.wide ? ' class="wide"' : ''}>` : `<span>${esc(initials(g.name))}</span>`}</div>
       <div class="game-info"><b title="${esc(g.name)}">${esc(g.name)}</b><small>${esc(g.source)}${played[g.id] ? ` · ${ago(played[g.id])}` : ''}</small></div>
       <button class="play" title="Gioca">${ICON.play}</button>
       ${g.id.startsWith('custom:') ? `<button class="icon-btn rm" title="Togli dalla libreria">${ICON.x}</button>` : ''}

@@ -40,7 +40,7 @@ function setup(ctx) {
   const view = (g) => {
     const c = covers.lookup(g.id);
     // la copertina scelta da te vince sempre; quella scaricata solo se il PC non ne ha una
-    if (c && (c.custom || !g.cover || g.icon)) return { ...g, cover: toUrl(c.cover), icon: false, wide: c.wide, customCover: c.custom };
+    if (c && (c.custom || !g.cover || g.icon)) return { ...g, cover: `${toUrl(c.cover)}?v=${c.at}`, icon: false, wide: c.wide, customCover: c.custom };
     return { ...g, cover: toUrl(g.cover) };
   };
   const fillCovers = () => {
