@@ -3,6 +3,8 @@ const $ = (s) => document.querySelector(s);
 const heat = (el, t, warm, hot) => { el.classList.toggle('hot', t != null && t >= hot); el.classList.toggle('warm', t != null && t >= warm && t < hot); };
 window.unico.onStats((s) => {
   if (!s) return;
+  $('#fpsRow').hidden = s.fps == null;
+  if (s.fps != null) $('#fps').textContent = s.fps;
   $('#cpu').textContent = `${s.cpu.total}%`;
   $('#cpuT').textContent = s.cpuTemp != null ? `${Math.round(s.cpuTemp)}°` : '';
   heat($('#cpuT'), s.cpuTemp, 80, 90);

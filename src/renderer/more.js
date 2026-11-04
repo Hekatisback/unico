@@ -193,9 +193,13 @@ const initials = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[
 function hue(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
 function renderGames() {
   const q = $('#games-search').value.trim().toLowerCase();
-  const list = gameList.filter((g) => !q || g.name.toLowerCase().includes(q));
+  const f = gamesFilter.get() || 'all';
+  const list = gameList.filter((g) => (!q || g.name.toLowerCase().includes(q)) && (f === 'all' || (f === 'fav' ? g.fav : g.source === f)));
   const played = CFG.lastPlayed || {};
-  list.sort((a, b) => (played[b.id] || 0) - (played[a.id] || 0) || a.name.localeCompare(b.name, 'it'));
+  const sort = $('#games-sort').value;
+  const byName = (a, b) => a.name.localeCompare(b.name, 'it');
+  list.sort((a, b) => (b.fav - a.fav) || (sort === 'name' ? byName(a, b) : sort === 'hours' ? (b.minutes - a.minutes) || byName(a, b) : ((played[b.id] || 0) - (played[a.id] || 0)) || byName(a, b)));
+  $$('#games-filter button').forEach((b) => { const v = b.dataset.v; b.hidden = v !== 'all' && v !== 'fav' && !gameList.some((g) => g.source === v); });
   $('#games-sub').textContent = gameList.length ? `${gameList.length} giochi trovati · avviandoli si attiva il profilo Gioco` : 'Tutti i tuoi giochi in un posto.';
   if (!list.length) {
     $('#games-grid').innerHTML = `<div class="empty glass show"><h3>${gameList.length ? 'Nessun risultato' : 'Nessun gioco trovato'}</h3><p class="muted">Unico cerca in Steam, Epic Games, Riot Client e Prism Launcher. Per altri giochi usa "Aggiungi gioco" e scegli il file .exe.</p></div>`;
@@ -204,7 +208,8 @@ function renderGames() {
   $('#games-grid').innerHTML = list.map((g) => `
     <div class="game glass" data-id="${esc(g.id)}">
       <div class="gcover${BLACK_BG.has(g.id) ? ' black' : ''}" data-h="${hue(g.name)}">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy"${g.icon ? ' class="icon"' : g.wide ? ' class="wide"' : ''}>` : `<span>${esc(initials(g.name))}</span>`}</div>
-      <div class="game-info"><b title="${esc(g.name)}">${esc(g.name)}</b><small>${esc(g.source)}${played[g.id] ? ` · ${ago(played[g.id])}` : ''}</small></div>
+      <div class="game-info"><b title="${esc(g.name)}">${esc(g.name)}</b><small>${esc(g.source)}${g.minutes ? ` · ${fmtPlay(g.minutes)}` : played[g.id] ? ` · ${ago(played[g.id])}` : ''}</small></div>
+      <button class="icon-btn star ${g.fav ? 'on' : ''}" title="${g.fav ? 'Togli dai preferiti' : 'Aggiungi ai preferiti'}">${g.fav ? '★' : '☆'}</button>
       <button class="play" title="Gioca">${ICON.play}</button>
       <button class="icon-btn edit" title="Cambia copertina"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg></button>
       ${g.id.startsWith('custom:') ? `<button class="icon-btn rm" title="Togli dalla libreria">${ICON.x}</button>` : ''}
@@ -218,6 +223,9 @@ async function loadGames(force = false) {
   renderGames();
 }
 $('#games-search').addEventListener('input', renderGames);
+const gamesFilter = chips($('#games-filter'), () => renderGames());
+$('#games-sort').addEventListener('change', renderGames);
+const fmtPlay = (m) => (m >= 60 ? `${Math.round(m / 6) / 10} h` : `${m} min`);
 api.on('games:covers', () => { if (currentPage === 'games') loadGames(false); else gameList = []; });
 
 // Clic destro su un gioco: scegli una copertina tua o torna a quella automatica.
@@ -316,6 +324,7 @@ $('#games-grid').addEventListener('click', async (e) => {
   const id = card.dataset.id;
   if (e.target.closest('.rm')) { await api.gamesRemoveCustom(id); return loadGames(true); }
   if (e.target.closest('.edit')) return openPicker(id);
+  if (e.target.closest('.star')) { const r = await api.gamesFav(id); const g0 = gameList.find((x) => x.id === id); if (g0) g0.fav = r.fav; return renderGames(); }
   const g = gameList.find((x) => x.id === id);
   card.classList.add('launching');
   const r = await act(null, () => api.gamesLaunch(id), `Avvio ${g ? g.name : ''}…`);

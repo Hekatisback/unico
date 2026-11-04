@@ -180,11 +180,11 @@ class RazerMouse {
     return null;
   }
 
-  async ask(request) {
+  async ask(request, opts = {}) {
     return this.run(async () => {
       if (!(await this.connect())) return { offline: true };
       try {
-        const r = await this.transact(request);
+        const r = await this.transact(request, opts);
         if (!r) return { error: 'nessuna risposta' };
         if (r.status === 0x04) return { asleep: true };
         if (r.status !== 0x02) return { error: STATUS[r.status] || `stato ${r.status}` };
@@ -219,8 +219,14 @@ class RazerMouse {
     return out;
   }
 
+  // DPI attuale, letta in silenzio (serve all'avviso a schermo quando premi il tasto DPI)
+  async currentDpi() {
+    const d = await this.ask(req.getDpi(), { quiet: true });
+    return d.args ? (d.args[1] << 8) | d.args[2] : null;
+  }
+
   async battery() {
-    const bat = await this.ask(req.battery());
+    const bat = await this.ask(req.battery(), { quiet: true });
     if (bat.offline) return { connected: false };
     if (bat.asleep) return { connected: true, asleep: true };
     return bat.args ? { connected: true, battery: batteryPercent(bat.args[1]) } : { connected: true };

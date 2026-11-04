@@ -37,11 +37,44 @@ function setup(ctx) {
 
   const covers = new Covers(path.join(userDir, 'covers'), log);
   const toUrl = (p) => (!p || p.startsWith('data:') ? p : pathToFileURL(p).href);
+  // Minuti giocati: sessioni avviate da Unico (gameId) o riconosciute dal nome del processo
+  const normName = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  let minutesCache = null;
+  const playMinutes = () => {
+    if (minutesCache) return minutesCache;
+    const m = {};
+    const lib = library || [];
+    for (const sess of readSessions()) {
+      let g = sess.gameId && lib.find((x) => x.id === sess.gameId);
+      if (!g) g = lib.find((x) => games.processHint(x) === sess.game || normName(x.name) === normName(sess.game));
+      if (g) m[g.id] = (m[g.id] || 0) + (sess.minutes || 0);
+    }
+    minutesCache = m;
+    return m;
+  };
   const view = (g) => {
+    const extra = { minutes: playMinutes()[g.id] || 0, fav: (S().favGames || []).includes(g.id) };
     const c = covers.lookup(g.id);
     // la copertina scelta da te vince sempre; quella scaricata solo se il PC non ne ha una
-    if (c && (c.custom || !g.cover || g.icon)) return { ...g, cover: `${toUrl(c.cover)}?v=${c.at}`, icon: false, wide: c.wide, customCover: c.custom };
-    return { ...g, cover: toUrl(g.cover) };
+    if (c && (c.custom || !g.cover || g.icon)) return { ...g, ...extra, cover: `${toUrl(c.cover)}?v=${c.at}`, icon: false, wide: c.wide, customCover: c.custom };
+    return { ...g, ...extra, cover: toUrl(g.cover) };
+  };
+  handle('games:fav', async (id) => {
+    const f = new Set(S().favGames || []);
+    if (f.has(id)) f.delete(id); else f.add(id);
+    S().favGames = [...f];
+    ctx.saveSettings();
+    if (ctx.updateTrayMenu) ctx.updateTrayMenu();
+    return { ok: true, fav: f.has(id) };
+  });
+  // Per il menu dell'icona: preferiti e poi i più recenti
+  ctx.trayGames = () => {
+    const lib = library || [];
+    const fav = new Set(S().favGames || []);
+    const lp = S().lastPlayed || {};
+    const favs = lib.filter((g) => fav.has(g.id)).map((g) => ({ ...g, fav: true }));
+    const recent = lib.filter((g) => !fav.has(g.id) && lp[g.id]).sort((a, b) => lp[b.id] - lp[a.id]).slice(0, Math.max(0, 8 - favs.length));
+    return [...favs, ...recent].map((g) => ({ id: g.id, name: g.name, fav: !!g.fav }));
   };
   const fillCovers = () => {
     if (MOCK || !library) return;
@@ -51,6 +84,8 @@ function setup(ctx) {
   handle('games:list', async (force) => {
     if (!library || force) library = MOCK ? require('../test/fake-system').fakeGames() : await games.scanAll(S().customGames || []);
     setTimeout(fillCovers, 500);
+    minutesCache = null;
+    if (ctx.updateTrayMenu) setTimeout(() => ctx.updateTrayMenu(), 0);
     return library.map(view);
   });
   handle('games:setCover', async (id) => {
@@ -75,14 +110,34 @@ function setup(ctx) {
   });
   handle('games:clearCover', async (id) => { covers.clearCustom(id); return { ok: true }; });
   handle('games:retryCovers', async () => { covers.forgetMisses(); fillCovers(); return { ok: true }; });
-  handle('games:launch', async (id) => {
+  let pendingLaunch = null;
+  async function launchGame(id) {
+    if (!library) library = MOCK ? require('../test/fake-system').fakeGames() : await games.scanAll(S().customGames || []);
     const g = (library || []).find((x) => x.id === id);
     if (!g) return { ok: false, error: 'Gioco non trovato, aggiorna la libreria' };
-    if (S().gamesProfile !== false && S().activeProfile !== 'gioco') await ctx.activateProfile('gioco');
+    if (S().gamesProfile !== false) {
+      const hint = games.processHint(g);
+      const map = (S().autoProfile && S().autoProfile.map) || {};
+      const target = hint && map[hint] && S().profiles[map[hint]] ? map[hint] : 'gioco';
+      if (S().activeProfile !== target) await ctx.activateProfile(target);
+    }
     const r = MOCK ? { ok: true } : await games.launch(g, (u) => shell.openExternal(u));
-    if (r.ok) { S().lastPlayed = { ...(S().lastPlayed || {}), [id]: Date.now() }; ctx.saveSettings(); }
+    if (r.ok) {
+      S().lastPlayed = { ...(S().lastPlayed || {}), [id]: Date.now() };
+      ctx.saveSettings();
+      pendingLaunch = { id, at: Date.now() };
+      if (ctx.updateTrayMenu) ctx.updateTrayMenu();
+    }
     return r;
-  });
+  }
+  ctx.launchGame = (id) => launchGame(id).then((r) => { if (r && !r.ok) log(`avvio gioco: ${r.error}`); });
+  handle('games:launch', async (id) => launchGame(id));
+  // libreria caricata in sottofondo dopo l'avvio, così il menu dell'icona ha già i giochi
+  setTimeout(async () => {
+    try { if (!library) library = MOCK ? require('../test/fake-system').fakeGames() : await games.scanAll(S().customGames || []); } catch (e) { log(`giochi: ${e.message}`); }
+    if (ctx.updateTrayMenu) ctx.updateTrayMenu();
+    fillCovers();
+  }, 10000);
   handle('games:addCustom', async () => {
     const r = await dialog.showOpenDialog(ctx.getWin(), { title: 'Scegli il file .exe del gioco', filters: [{ name: 'Programmi', extensions: ['exe', 'lnk', 'url'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return { ok: true, added: false };
@@ -99,11 +154,12 @@ function setup(ctx) {
 
   function sessionView(c) {
     const n = Math.max(1, c.samples);
-    return { game: c.game, start: c.start, end: c.end || null, minutes: Math.round(((c.end || Date.now()) - c.start) / 60000), cpuAvg: Math.round(c.cpu / n), gpuAvg: Math.round(c.gpu / n), gpuTempMax: c.gpuTempMax, ramMax: c.ramMax };
+    return { game: c.game, start: c.start, end: c.end || null, minutes: Math.round(((c.end || Date.now()) - c.start) / 60000), cpuAvg: Math.round(c.cpu / n), gpuAvg: Math.round(c.gpu / n), gpuTempMax: c.gpuTempMax, ramMax: c.ramMax, gameId: c.gameId || null };
   }
   ctx.onGame = (game) => {
     if (game && !current) {
-      current = { game, start: Date.now(), samples: 0, cpu: 0, gpu: 0, gpuTempMax: 0, ramMax: 0 };
+      current = { game, start: Date.now(), samples: 0, cpu: 0, gpu: 0, gpuTempMax: 0, ramMax: 0, gameId: pendingLaunch && Date.now() - pendingLaunch.at < 5 * 60000 ? pendingLaunch.id : null };
+      pendingLaunch = null;
       sys.want('session', true);
       log(`sessione: ${game} iniziata`);
     } else if (!game && current) {
@@ -114,6 +170,7 @@ function setup(ctx) {
       if (v.minutes < 1) return;
       const list = readSessions();
       list.push(v);
+      minutesCache = null;
       try { fs.writeFileSync(sessionsFile, JSON.stringify(list.slice(-100))); } catch (e) { log(`sessioni: ${e.message}`); }
       log(`sessione: ${v.game} ${v.minutes} min, GPU max ${v.gpuTempMax}°C`);
     }

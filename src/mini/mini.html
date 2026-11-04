@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: blob: file: https:">
+  <title>Unico mini</title>
+  <link rel="stylesheet" href="mini.css">
+</head>
+<body>
+  <header><b>Unico</b><span class="grow"></span><button id="open" title="Apri Unico">⤢</button><button id="close" title="Chiudi">✕</button></header>
+  <section class="bats">
+    <div class="bat" id="b-mouse"><i>Mouse</i><b>—</b><s><u></u></s></div>
+    <div class="bat" id="b-headset"><i>Cuffie</i><b>—</b><s><u></u></s></div>
+    <div class="bat" id="b-keyboard"><i>Tastiera</i><b>—</b><s><u></u></s></div>
+  </section>
+  <section class="stats">
+    <div><i>CPU</i><b id="s-cpu">—</b></div><div><i>GPU</i><b id="s-gpu">—</b></div>
+    <div><i>Temp. GPU</i><b id="s-temp">—</b></div><div><i>RAM</i><b id="s-ram">—</b></div>
+  </section>
+  <section class="media" id="media">
+    <div class="art" id="m-art"></div>
+    <div class="info"><b id="m-title">Niente in riproduzione</b><span id="m-artist"></span></div>
+    <div class="ctl"><button data-k="prev">⏮</button><button data-k="playpause" id="m-play">⏯</button><button data-k="next">⏭</button></div>
+  </section>
+  <section class="profiles" id="profiles"></section>
+  <script src="mini.js"></script>
+</body>
+</html>

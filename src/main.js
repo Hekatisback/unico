@@ -50,7 +50,7 @@ const DEFAULTS = {
   startHidden: true,
   appearance: { background: 'acrylic', theme: 'system', v: 2 },
   alerts: { enabled: true, gpuTemp: 87, ram: 92, diskGB: 10 },
-  overlay: { enabled: false, corner: 'tl', shortcut: 'CommandOrControl+Shift+O', gameOnly: false },
+  overlay: { enabled: false, corner: 'tl', shortcut: 'CommandOrControl+Shift+O', gameOnly: false, fps: false },
   capture: { audio: true, shotKey: 'Control+Alt+S', recKey: 'Control+Alt+R' },
   clipboard: { enabled: true },
   reminders: [],
@@ -58,7 +58,14 @@ const DEFAULTS = {
   lastPlayed: {},
   gamesProfile: true,
   steamGridDbKey: '',
-  phoneNotif: { enabled: false, serial: null, muted: [] },
+  phoneNotif: { enabled: false, serial: null, muted: [], calls: true },
+  phoneSync: { enabled: false, dir: null },
+  syncLights: { effect: 'static', color: '#7c5cff' },
+  lightsAuto: { idle: false, idleMin: 10, night: false, from: '23:00', to: '07:00' },
+  osd: { enabled: true },
+  wallpaperPause: true,
+  favGames: [],
+  mini: { top: true },
   profiles: DEFAULT_PROFILES,
   autoProfile: DEFAULT_AUTO,
   activeProfile: null,
@@ -120,13 +127,15 @@ function onStats(s) {
   if (win && !win.isDestroyed() && win.isVisible()) win.webContents.send('stats', { ...s, history: sys.history });
   if (overlayWin && !overlayWin.isDestroyed()) {
     const bat = (k) => { const d = state[k] || {}; return typeof d.battery === 'number' ? d.battery : d.lastBattery ? d.lastBattery.percent : null; };
-    overlayWin.webContents.send('stats', { ...s, devices: { mouse: bat('mouse'), headset: bat('headset') } });
+    overlayWin.webContents.send('stats', { ...s, fps: feat2.fpsNow ? feat2.fpsNow() : null, devices: { mouse: bat('mouse'), headset: bat('headset') } });
   }
+  const mini = feat2.miniWin && feat2.miniWin();
+  if (mini && !mini.isDestroyed()) mini.webContents.send('stats', s);
 }
 
 function overlayBounds() {
   const wa = screen.getPrimaryDisplay().workArea;
-  const w = 210, h = 150, m = 12;
+  const w = 210, h = settings.overlay.fps ? 172 : 150, m = 12;
   const c = settings.overlay.corner || 'tl';
   return { width: w, height: h, x: c.endsWith('l') ? wa.x + m : wa.x + wa.width - w - m, y: c.startsWith('t') ? wa.y + m : wa.y + wa.height - h - m };
 }
@@ -234,7 +243,9 @@ async function activateProfile(id, { auto = false } = {}) {
   state.activeProfile = id;
   saveSettings();
   push();
-  if (auto && Notification.isSupported()) new Notification({ title: `Profilo ${p.name} attivato`, body: auto === true ? 'Gioco rilevato' : String(auto), silent: true, icon: iconPath() }).show();
+  if (feat2.osd) feat2.osd(`Profilo ${p.name}`, auto ? (auto === true ? 'Gioco rilevato' : String(auto)) : '');
+  else if (auto && Notification.isSupported()) new Notification({ title: `Profilo ${p.name} attivato`, body: auto === true ? 'Gioco rilevato' : String(auto), silent: true, icon: iconPath() }).show();
+  updateTrayMenu();
   if (!r.ok) log(`profilo ${id}: ${r.errors.join('; ')}`);
   return r.ok ? { ok: true } : { ok: false, error: `Applicato in parte: ${r.errors.join('; ')}` };
 }
@@ -245,11 +256,18 @@ async function watchGames() {
   try { names = await sys.procNames(); } catch (e) { return; }
   const game = detectGame(names, A.games);
   if (feat.onGame) feat.onGame(game);
-  if (!!game !== !!gameRunning) { gameRunning = game; if (settings.overlay.gameOnly) syncOverlay(); }
+  if ((game || null) !== (gameRunning || null)) {
+    gameRunning = game;
+    if (settings.overlay.gameOnly) syncOverlay();
+    if (feat2.onGameChange) feat2.onGameChange(game);
+  }
   if (!A.enabled) return;
-  if (game && !autoState.game) {
-    autoState = { game, previous: settings.activeProfile && settings.activeProfile !== 'gioco' ? settings.activeProfile : null };
-    if (settings.activeProfile !== 'gioco') await activateProfile('gioco', { auto: `${game} rilevato` });
+  // profilo scelto per quel gioco (Impostazioni → Profili), altrimenti "Gioco"
+  const target = game ? ((A.map && A.map[game] && settings.profiles[A.map[game]]) ? A.map[game] : 'gioco') : null;
+  if (game && autoState.game !== game) {
+    const prev = autoState.game ? autoState.previous : (settings.activeProfile && settings.activeProfile !== target ? settings.activeProfile : null);
+    autoState = { game, previous: prev };
+    if (settings.activeProfile !== target) await activateProfile(target, { auto: `${game} rilevato` });
   } else if (!game && autoState.game) {
     const back = autoState.previous || 'lavoro';
     autoState = { game: null, previous: null };
@@ -280,6 +298,8 @@ function push() {
   rememberBatteries();
   state.updated = Date.now();
   if (win && !win.isDestroyed()) win.webContents.send('state', state);
+  const mini = feat2.miniWin && feat2.miniWin();
+  if (mini && !mini.isDestroyed()) mini.webContents.send('state', state);
   updateTray();
 }
 
@@ -395,14 +415,25 @@ function showWindow() {
 
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(iconPath()).resize({ width: 16, height: 16 }));
+  updateTrayMenu();
+  tray.on('click', showWindow);
+  updateTray();
+}
+// Menu dell'icona: giochi preferiti e recenti si avviano da qui senza aprire la finestra.
+function updateTrayMenu() {
+  if (!tray) return;
+  const games = feat.trayGames ? feat.trayGames() : [];
+  const profiles = Object.entries(settings.profiles).map(([id, p]) => ({ label: p.name, type: 'radio', checked: settings.activeProfile === id, click: () => activateProfile(id) }));
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Apri Unico', click: showWindow },
+    { label: 'Finestra compatta', click: () => feat2.toggleMini && feat2.toggleMini() },
+    { type: 'separator' },
+    ...(games.length ? [{ label: 'Gioca', submenu: games.map((g) => ({ label: `${g.fav ? '★ ' : ''}${g.name}`, click: () => feat.launchGame(g.id) })) }] : []),
+    { label: 'Profilo', submenu: profiles },
     { label: 'Aggiorna batterie', click: () => refreshBatteries() },
     { type: 'separator' },
     { label: 'Esci', click: () => { quitting = true; app.quit(); } },
   ]));
-  tray.on('click', showWindow);
-  updateTray();
 }
 
 // Toglie dall'avvio automatico le voci di vecchie copie di Unico (es. la versione zip in Documenti).
@@ -457,7 +488,8 @@ function cycleEqPreset() {
   saveSettings();
   state.eq = { ...apo.status(), ...settings.eq };
   push();
-  if (Notification.isSupported()) new Notification({ title: `EQ: ${next}`, body: 'Preset cambiato dalla rotella delle cuffie', silent: true, icon: iconPath() }).show();
+  if (feat2.osd) feat2.osd(next, 'Equalizzatore cuffie');
+  else if (Notification.isSupported()) new Notification({ title: `EQ: ${next}`, body: 'Preset cambiato dalla rotella delle cuffie', silent: true, icon: iconPath() }).show();
 }
 
 async function restoreHeadsetLeds() {
@@ -560,6 +592,7 @@ handle('sys:setBrightness', async ({ id, value }) => { await sys.setBrightness(i
 handle('overlay:set', async (patch) => {
   if (patch && patch.corner) settings.overlay.corner = patch.corner;
   if (patch && patch.gameOnly !== undefined) settings.overlay.gameOnly = !!patch.gameOnly;
+  if (patch && patch.fps !== undefined) { settings.overlay.fps = !!patch.fps; if (feat2.onGameChange && gameRunning) feat2.onGameChange(gameRunning); }
   return setOverlay(patch && patch.enabled !== undefined ? patch.enabled : settings.overlay.enabled);
 });
 handle('profile:activate', async (id) => activateProfile(id));
@@ -596,6 +629,17 @@ handle('app:settings', async (patch) => {
   return { ok: true, settings };
 });
 
+// Sostituisce un valore intero (es. la lista dei profili) invece di unirlo a quello vecchio
+handle('app:setKey', async ({ key, value }) => {
+  const parts = String(key).split('.');
+  if (!['profiles', 'autoProfile'].includes(parts[0])) return { ok: false, error: 'chiave non ammessa' };
+  let o = settings;
+  for (const k of parts.slice(0, -1)) o = o[k] = o[k] && typeof o[k] === 'object' ? o[k] : {};
+  o[parts[parts.length - 1]] = value;
+  saveSettings();
+  updateTrayMenu();
+  return { ok: true, settings };
+});
 handle('diag:devices', async () => {
   const all = await HID.devicesAsync();
   const known = all.filter((d) => [0x1532, 0x1b1c, 0x0c45].includes(d.vendorId) || (d.vendorId === 0x05ac && d.productId === 0x024f));
@@ -637,6 +681,14 @@ const feat = {
   },
 };
 
+const feat2 = {
+  app, handle, log, MOCK, iconPath, sys, phone, mouse, headset, keyboard,
+  getSettings: () => settings, saveSettings, getWin: () => win, getState: () => state, push,
+  refresh: () => refresh(), headsetCtx: () => headsetCtx(), showWindow: () => showWindow(),
+  material: () => material(), steamPath: () => require('./system/games').steamPathFromRegistry(),
+};
+feat.updateTrayMenu = () => updateTrayMenu();
+
 const hex = (v) => (v || 0).toString(16).padStart(4, '0');
 
 // --- Avvio --------------------------------------------------------------------
@@ -656,6 +708,7 @@ app.on('before-quit', async (e) => {
 
 app.whenReady().then(async () => {
   require('./features').setup(feat);
+  require('./extras').setup(feat2);
   app.setAppUserModelId('it.hekat.unico');
   log(`--- avvio Unico ${app.getVersion()} (electron ${process.versions.electron}, hidapi ${safe(() => HID.getHidapiVersion())})`);
   applyLoginItem();
@@ -677,6 +730,7 @@ app.whenReady().then(async () => {
   if (process.env.UNICO_SHOT2) captureDemo(process.env.UNICO_SHOT2);
   if (process.env.UNICO_SHOTS) captureScreens(process.env.UNICO_SHOTS);
   if (process.env.UNICO_SHOT3) captureNew(process.env.UNICO_SHOT3);
+  if (process.env.UNICO_SHOT4) captureV26(process.env.UNICO_SHOT4);
 });
 
 // Solo sviluppo: overlay e lettore musicale.
@@ -695,6 +749,29 @@ async function captureDemo(dir) {
 }
 
 // Solo sviluppo: salva uno screenshot di ogni pagina e chiude.
+// Solo sviluppo: pagine della 2.6.
+async function captureV26(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const shot = async (name) => fs.writeFileSync(path.join(dir, `${name}.png`), (await win.webContents.capturePage()).toPNG());
+  const js = (code) => win.webContents.executeJavaScript(code);
+  win.show();
+  await wait(2500);
+  await js(`document.querySelector('nav button[data-page="home"]').click(); document.querySelector('#view').scrollTop = 420;`); await wait(1200); await shot('home-lights');
+  await js(`document.querySelector('nav button[data-page="settings"]').click(); document.querySelector('[data-tabs="settings"] button[data-tab="general"]').click();`); await wait(1000); await shot('settings-general');
+  await js(`document.querySelector('[data-tabs="settings"] button[data-tab="profiles"]').click(); setTimeout(() => document.querySelector('#profile-new').click(), 300);`); await wait(2200); await shot('settings-profiles');
+  await js(`document.querySelector('#view').scrollTop = 0;`); await wait(400); await shot('settings-profiles-top');
+  await js(`document.querySelector('nav button[data-page="games"]').click(); setTimeout(() => document.querySelector('#games-grid .game .star').click(), 900);`); await wait(2200); await shot('games');
+  await js(`document.querySelector('nav button[data-page="system"]').click(); setTimeout(() => document.querySelector('[data-tabs="system"] button[data-tab="clean"]').click(), 300);`); await wait(2000); await shot('system-clean');
+  await js(`document.querySelector('[data-tabs="system"] button[data-tab="res"]').click(); document.querySelector('#view').scrollTop = 600;`); await wait(1000); await shot('system-overlay');
+  await js(`document.querySelector('nav button[data-page="phone"]').click(); setTimeout(() => document.querySelector('[data-tabs="phone"] button[data-tab="notif"]').click(), 300);`); await wait(2000); await shot('phone-notif');
+  feat2.osd('1600 DPI', 'Mouse'); await wait(600);
+  feat2.toggleMini(true); await wait(3500);
+  const m = feat2.miniWin(); if (m) fs.writeFileSync(path.join(dir, 'mini.png'), (await m.webContents.capturePage()).toPNG());
+  quitting = true;
+  app.quit();
+}
+
 // Solo sviluppo: pagine della 2.1.
 async function captureNew(dir) {
   fs.mkdirSync(dir, { recursive: true });

@@ -1,0 +1,10 @@
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; user-select: none; }
+body { display: grid; place-items: center; }
+.osd { min-width: 180px; padding: 14px 26px; border-radius: 22px; text-align: center; color: #fff;
+  background: linear-gradient(150deg, rgba(40, 34, 70, .82), rgba(18, 18, 30, .82));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 0 0 1px rgba(255,255,255,.12), 0 14px 34px -12px rgba(0,0,0,.6);
+  opacity: 0; transform: translateY(10px) scale(.96); transition: opacity .22s, transform .3s cubic-bezier(.3, 1.5, .5, 1); }
+.osd.show { opacity: 1; transform: none; }
+.osd b { display: block; font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+.osd span { display: block; font-size: 12.5px; opacity: .7; margin-top: 2px; }
+.osd span:empty { display: none; }

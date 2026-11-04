@@ -99,3 +99,23 @@ test('copertine: IGN legge og:image dalla pagina del gioco', async () => {
     assert.strictEqual(seen[1], 'https://assets-prd.ignimgs.com/2022/box.jpg?width=600');
   } finally { global.fetch = orig; }
 });
+
+test('2.6: fascia notturna, FPS, cartella condivisa, chiamate', () => {
+  const x = require('../src/extras');
+  const at = (h, m) => { const d = new Date(2026, 0, 1, h, m); return d; };
+  assert.ok(x.inRange(at(23, 30), '23:00', '07:00'));
+  assert.ok(x.inRange(at(3, 0), '23:00', '07:00'));
+  assert.ok(!x.inRange(at(12, 0), '23:00', '07:00'));
+  assert.ok(x.inRange(at(14, 0), '13:00', '15:00'));
+  const m = x.makeFpsMeter();
+  m.line('Application,ProcessID,MsBetweenPresents,Other');
+  for (let i = 0; i < 30; i++) m.line('game.exe,1,16.667,0');
+  assert.strictEqual(m.fps(), 60);
+  const phone = x.parsePhoneList('10|1700000000|./a.txt\n20|1700000000|./dir/b.jpg\n5|1|./.nomedia\n');
+  assert.deepStrictEqual([...phone.keys()], ['a.txt', 'dir/b.jpg']);
+  const local = new Map([['a.txt', { size: 11, mtime: 1800000000000 }], ['c.pdf', { size: 3, mtime: 1 }]]);
+  const plan = x.syncPlan(local, phone);
+  assert.deepStrictEqual(plan, { push: ['a.txt', 'c.pdf'], pull: ['dir/b.jpg'] });
+  assert.deepStrictEqual(x.parseCall('  mCallState=1\n  mCallIncomingNumber=+39 333 1234567\n'), { ringing: true, number: '+39 333 1234567' });
+  assert.strictEqual(x.parseCall('mCallState=0').ringing, false);
+});

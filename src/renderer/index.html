@@ -77,9 +77,15 @@
             <button class="act-btn" id="qa-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Blocca</button>
             <button class="act-btn" id="qa-sleep"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>Sospendi</button>
             <button class="act-btn" id="qa-overlay"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M6 8h5M6 11h3"/></svg><span>Overlay</span></button>
+            <button class="act-btn" id="qa-mini"><svg viewBox="0 0 24 24"><rect x="13" y="3" width="8" height="11" rx="2"/><path d="M3 8h6M3 12h6M3 16h14"/></svg><span>Compatta</span></button>
             <button class="act-btn" id="qa-shutdown"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.3 6.3a8 8 0 1 0 11.4 0"/></svg><span id="qa-shutdown-label">Spegni tra…</span></button>
           </div>
         </div>
+      </div>
+      <div class="card glass lights-card">
+        <div class="card-head"><div><h3>Luci di tutte le periferiche</h3><p class="muted">Un colore e un effetto per rotella del mouse, cuffie e tastiera insieme.</p></div>
+          <div class="row"><input type="color" id="ls-color"><button class="btn primary" id="ls-apply">Applica a tutte</button></div></div>
+        <div class="chips" id="ls-effect"><button data-v="off">Spente</button><button data-v="static">Fisse</button><button data-v="breathing">Respiro</button><button data-v="spectrum">Arcobaleno</button></div>
       </div>
       <div class="home-row">
         <div class="card glass media" id="media-card">
@@ -290,6 +296,7 @@
           <div class="two">
             <div class="card glass">
               <div class="card-head"><div><h3>Notifiche del telefono sul PC</h3><p class="muted">WhatsApp, Telegram, messaggi e il resto arrivano come notifiche di Windows. Funziona con il telefono collegato (cavo o Wi-Fi), anche senza mirroring.</p></div><label class="switch"><input type="checkbox" id="pn-on"><span></span></label></div>
+              <label class="switch inline"><input type="checkbox" id="pn-calls"><span></span>Avvisami delle chiamate in arrivo (clic sull'avviso = rispondi dal PC col mirroring)</label>
               <div id="pn-list" class="pn-list"></div>
             </div>
             <div class="card glass">
@@ -297,6 +304,10 @@
               <p class="muted">Scrivi qui e il testo viene digitato nel campo aperto sul telefono (chat, ricerca…). Durante il mirroring gli appunti sono già condivisi: <kbd>Ctrl</kbd>+<kbd>C</kbd> sul PC e incolli sul telefono, e viceversa.</p>
               <textarea id="pn-text" rows="4" placeholder="Scrivi qui…"></textarea>
               <div class="row"><button class="btn primary" id="pn-send">Scrivi sul telefono</button><button class="btn ghost" id="pn-paste">Usa gli appunti del PC</button></div>
+              <h3 class="spaced">Cartella condivisa</h3>
+              <p class="muted">Quello che metti in <b>Documenti\Unico Telefono</b> arriva sul telefono nella cartella <b>Unico</b>, e viceversa. Controlla ogni minuto col telefono collegato. Non cancella mai niente: per togliere un file, cancellalo da entrambe le parti.</p>
+              <div class="row"><label class="switch inline"><input type="checkbox" id="ps-on"><span></span>Attiva</label><button class="btn ghost small" id="ps-now">Sincronizza ora</button><button class="btn ghost small" id="ps-open">Apri cartella</button></div>
+              <p class="muted" id="ps-state"></p>
               <h3 class="spaced">App silenziate</h3>
               <p class="muted">Tocca un'app per silenziarla: quelle barrate non mandano notifiche al PC.</p>
               <div id="pn-muted" class="chips wrap"></div>
@@ -411,7 +422,7 @@
       </div>
       <div class="tab-body" id="games-body">
         <div class="tab on" data-tab="lib">
-          <div class="row lib-tools"><input type="text" id="games-search" placeholder="Cerca un gioco…"><span class="grow"></span><button class="btn ghost" id="games-covers">Copertine</button><button class="btn ghost" id="games-add">Aggiungi gioco</button><button class="btn ghost" id="games-scan">Aggiorna</button></div>
+          <div class="row lib-tools"><input type="text" id="games-search" placeholder="Cerca un gioco…"><div class="chips" id="games-filter"><button data-v="all" class="on">Tutti</button><button data-v="fav">★ Preferiti</button><button data-v="Steam">Steam</button><button data-v="Epic">Epic</button><button data-v="Riot">Riot</button><button data-v="Minecraft">Minecraft</button><button data-v="Aggiunto da te">Aggiunti</button></div><select id="games-sort"><option value="recent">Giocati di recente</option><option value="name">Nome</option><option value="hours">Ore di gioco</option></select><span class="grow"></span><button class="btn ghost" id="games-covers">Copertine</button><button class="btn ghost" id="games-add">Aggiungi gioco</button><button class="btn ghost" id="games-scan">Aggiorna</button></div>
           <div id="games-grid" class="games-grid"><p class="muted">Cerco i giochi in Steam, Epic, Riot e Prism Launcher…</p></div>
         </div>
         <div class="tab" data-tab="sessions">
@@ -494,6 +505,8 @@
               <label class="switch"><input type="checkbox" id="ov-on"><span></span></label></div>
             <div class="chips" id="ov-corner"><button data-v="tl">In alto a sinistra</button><button data-v="tr">In alto a destra</button><button data-v="bl">In basso a sinistra</button><button data-v="br">In basso a destra</button></div>
             <label class="switch inline spaced"><input type="checkbox" id="ov-game"><span></span>Mostralo solo mentre giochi (con un gioco riconosciuto aperto)</label>
+            <label class="switch inline"><input type="checkbox" id="ov-fps"><span></span>Mostra gli FPS del gioco (PresentMon)</label>
+            <p class="muted" id="ov-fps-note"></p>
           </div>
         </div>
         <div class="tab" data-tab="procs">
@@ -510,7 +523,8 @@
           </div>
         </div>
         <div class="tab" data-tab="clean">
-          <div class="clean-grid">
+          <div class="clean-grid four">
+            <div class="card glass tile"><h3>Cache shader</h3><b class="big-num small" id="c-shader">—</b><p class="muted" id="c-shader-sub">NVIDIA, DirectX e Steam. Utile se un gioco scatta dopo un aggiornamento dei driver.</p><button class="btn ghost" id="c-shader-btn">Pulisci</button></div>
             <div class="card glass tile"><h3>File temporanei</h3><b class="big-num small" id="c-temp">—</b><p class="muted">File di installazioni e programmi, più vecchi di 2 giorni.</p><button class="btn ghost" id="c-temp-btn">Pulisci</button></div>
             <div class="card glass tile"><h3>Cestino</h3><b class="big-num small" id="c-bin">—</b><p class="muted" id="c-bin-sub"></p><button class="btn ghost" id="c-bin-btn">Svuota</button></div>
             <div class="card glass tile"><h3>Download</h3><b class="big-num small" id="c-dl">—</b><p class="muted">I file più grandi sono elencati qui sotto.</p><button class="btn ghost" id="c-scan">Analizza di nuovo</button></div>
@@ -552,6 +566,20 @@
           </div>
           <div class="two">
             <div class="card glass">
+              <h3>Luci automatiche</h3>
+              <div class="row"><label class="switch inline"><input type="checkbox" id="la-idle"><span></span>Spegnile quando non usi il PC da</label><select id="la-min"><option value="5">5 min</option><option value="10">10 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">1 ora</option></select></div>
+              <div class="row"><label class="switch inline"><input type="checkbox" id="la-night"><span></span>Spegnile di notte, dalle</label><input type="time" id="la-from"><span>alle</span><input type="time" id="la-to"></div>
+              <p class="muted">Quando torni al PC (o finisce la notte) si riaccendono come le avevi.</p>
+            </div>
+            <div class="card glass">
+              <h3>Durante l'uso</h3>
+              <label class="switch inline"><input type="checkbox" id="osd-on"><span></span>Avviso a schermo per DPI, equalizzatore e profili</label>
+              <label class="switch inline"><input type="checkbox" id="we-pause"><span></span>Metti in pausa Wallpaper Engine mentre giochi</label>
+              <div class="row"><button class="btn ghost small" id="osd-test">Prova l'avviso</button></div>
+            </div>
+          </div>
+          <div class="two">
+            <div class="card glass">
               <div class="card-head"><div><h3>Aggiornamenti</h3><p class="muted" id="upd-text">Unico controlla da solo ogni 6 ore e scarica in silenzio.</p></div></div>
               <div class="row"><button class="btn ghost" id="upd-check">Controlla ora</button><button class="btn primary" id="upd-install" hidden>Riavvia e aggiorna</button></div>
             </div>
@@ -574,6 +602,10 @@
             <div class="card-head"><div><h3>Profilo automatico per i giochi</h3><p class="muted">Quando apri uno di questi programmi Unico passa a "Gioco", e quando lo chiudi torna al profilo di prima.</p></div><label class="switch"><input type="checkbox" id="auto-on"><span></span></label></div>
             <label class="field">Giochi (nomi dei processi, separati da virgola) <input type="text" id="auto-games"></label>
             <p class="muted">"javaw" è Minecraft (Prism Launcher). Il nome esatto lo trovi in Sistema → Processi.</p>
+          </div>
+          <div class="card glass">
+            <div class="card-head"><div><h3>Profilo per ogni gioco</h3><p class="muted">Ogni gioco della lista può avere il suo profilo. Se non scegli niente usa "Gioco".</p></div><button class="btn ghost" id="profile-new">Nuovo profilo</button></div>
+            <div id="game-map" class="game-map"></div>
           </div>
           <div class="profile-grid" id="profile-editor"></div>
         </div>
@@ -614,5 +646,6 @@
   <script src="app.js"></script>
   <script src="extra.js"></script>
   <script src="more.js"></script>
+  <script src="more2.js"></script>
 </body>
 </html>

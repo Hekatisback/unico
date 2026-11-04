@@ -161,4 +161,4 @@ function processHint(game) {
   return null;
 }
 
-module.exports = { steamCover, parseVdf, steamGames, epicGames, riotGames, prismInstances, scanAll, launch, processHint };
+module.exports = { steamPathFromRegistry, steamCover, parseVdf, steamGames, epicGames, riotGames, prismInstances, scanAll, launch, processHint };

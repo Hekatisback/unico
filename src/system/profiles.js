@@ -6,7 +6,7 @@ const DEFAULT_PROFILES = {
   lavoro: { name: 'Lavoro', power: 'balanced', dpi: null, eqPreset: 'Voce', kbMode: null, kbBrightness: 3, headsetLight: null, closeApps: [], overlay: false },
   notte: { name: 'Notte', power: 'efficiency', dpi: null, eqPreset: 'Piatto', kbMode: 0, kbBrightness: null, headsetLight: 'off', closeApps: [], overlay: false },
 };
-const DEFAULT_AUTO = { enabled: true, games: ['League of Legends', 'VALORANT-Win64-Shipping', 'RobloxPlayerBeta', 'cs2', 'FortniteClient-Win64-Shipping', 'javaw'] };
+const DEFAULT_AUTO = { enabled: true, map: {}, games: ['League of Legends', 'VALORANT-Win64-Shipping', 'RobloxPlayerBeta', 'cs2', 'FortniteClient-Win64-Shipping', 'javaw'] };
 
 // Applica un profilo: ogni passo è indipendente, gli errori vengono raccolti senza fermare gli altri.
 async function applyProfile(p, deps) {

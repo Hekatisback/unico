@@ -41,6 +41,14 @@ jobs:
           Copy-Item "scrcpy-tmp/scrcpy-win64-v$v/*" vendor/scrcpy -Recurse -Force
           Get-ChildItem vendor/scrcpy
 
+      - name: PresentMon (FPS nell'overlay)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          New-Item -ItemType Directory -Force vendor/presentmon | Out-Null
+          Invoke-WebRequest "https://github.com/GameTechDev/PresentMon/releases/download/v2.3.0/PresentMon-2.3.0-x64.exe" -OutFile vendor/presentmon/PresentMon.exe
+          Invoke-WebRequest "https://raw.githubusercontent.com/GameTechDev/PresentMon/main/LICENSE.txt" -OutFile vendor/presentmon/LICENSE.txt -ErrorAction SilentlyContinue
+
       - name: Build e pubblicazione
         shell: bash
         env:
