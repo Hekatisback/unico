@@ -223,8 +223,14 @@ class SystemService {
       let disk = null;
       try { const st = fs.statfsSync(WIN ? 'C:\\' : '/'); disk = { total: st.blocks * st.bsize, free: st.bavail * st.bsize }; } catch (e) {}
       let extra = {};
-      if (WIN && (!this.lastExtra || Date.now() - this.lastExtra > 1900)) {
-        try { this.extra = await this.helper.call('sample', {}, 8000); this.lastExtra = Date.now(); } catch (e) { this.log(`sistema: ${e.message}`); this.lastExtra = Date.now(); }
+      // I dati di PowerShell (disco, rete, batteria) arrivano quando sono pronti: CPU e RAM non li aspettano,
+      // così la pagina si riempie subito anche se il primo avvio di PowerShell è lento.
+      if (WIN && !this.extraBusy && (!this.lastExtra || Date.now() - this.lastExtra > 1900)) {
+        this.extraBusy = true;
+        this.helper.call('sample', {}, 20000)
+          .then((x) => { this.extra = x; })
+          .catch((e) => this.log(`sistema: ${e.message}`))
+          .finally(() => { this.lastExtra = Date.now(); this.extraBusy = false; });
       }
       extra = this.extra || {};
       const g = this.gpu.last && Date.now() - this.gpu.last.at < 5000 ? this.gpu.last : null;

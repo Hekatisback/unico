@@ -69,3 +69,15 @@ test('groupSessions unisce le sessioni della stessa app', () => {
   assert.strictEqual(g[0].peak, 40);
   assert.ok(g[1].system);
 });
+
+test('copertine Steam: formato nuovo in sottocartella e formato vecchio', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'steamc-'));
+  const lc = path.join(root, 'appcache', 'librarycache');
+  fs.mkdirSync(path.join(lc, '730', 'a1b2c3'), { recursive: true });
+  fs.writeFileSync(path.join(lc, '730', 'header.jpg'), 'x');
+  fs.writeFileSync(path.join(lc, '730', 'a1b2c3', 'library_600x900.jpg'), 'x');
+  fs.writeFileSync(path.join(lc, '440_library_600x900.jpg'), 'x');
+  assert.strictEqual(games.steamCover(root, '730'), path.join(lc, '730', 'a1b2c3', 'library_600x900.jpg'));
+  assert.strictEqual(games.steamCover(root, '440'), path.join(lc, '440_library_600x900.jpg'));
+  assert.strictEqual(games.steamCover(root, '999'), null);
+});

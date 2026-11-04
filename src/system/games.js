@@ -49,10 +49,26 @@ function steamGames(steamPath) {
   }
   return games;
 }
+// Copertine: il vecchio Steam le salva come <appid>_library_600x900.jpg, quello nuovo in
+// librarycache/<appid>/ oppure in una sottocartella con un nome casuale.
+const COVER_NAMES = ['library_600x900.jpg', 'library_600x900_2x.jpg', 'library_capsule.jpg', 'header.jpg', 'library_header.jpg'];
 function steamCover(steamPath, appid) {
   const base = path.join(steamPath, 'appcache', 'librarycache');
-  const cands = [path.join(base, appid, 'library_600x900.jpg'), path.join(base, `${appid}_library_600x900.jpg`), path.join(base, appid, 'header.jpg'), path.join(base, `${appid}_header.jpg`)];
-  return cands.find(exists) || null;
+  const flat = [`${appid}_library_600x900.jpg`, `${appid}_header.jpg`].map((n) => path.join(base, n)).find(exists);
+  const dir = path.join(base, String(appid));
+  const found = [];
+  const walk = (d, depth) => {
+    let items = [];
+    try { items = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+    for (const it of items) {
+      if (it.isDirectory() && depth < 2) walk(path.join(d, it.name), depth + 1);
+      else if (it.isFile() && COVER_NAMES.includes(it.name.toLowerCase())) found.push({ p: path.join(d, it.name), rank: COVER_NAMES.indexOf(it.name.toLowerCase()) });
+    }
+  };
+  walk(dir, 0);
+  found.sort((a, b) => a.rank - b.rank);
+  if (found.length && found[0].rank < 3) return found[0].p;
+  return flat || (found[0] && found[0].p) || null;
 }
 
 function epicGames(manifestDir = path.join(env('ProgramData', 'C:\\ProgramData'), 'Epic', 'EpicGamesLauncher', 'Data', 'Manifests')) {
@@ -101,7 +117,9 @@ function prismInstances() {
     for (const name of dirs) {
       const cfg = readText(path.join(inst, name, 'instance.cfg')) || '';
       const nm = (cfg.match(/^name=(.*)$/m) || [])[1] || name;
-      out.push({ id: `prism:${name}`, source: 'Minecraft', name: nm.trim(), dir: path.join(inst, name), cover: null, launch: { type: 'exe', exe, args: ['--launch', name] } });
+      const icon = ((cfg.match(/^iconKey=(.*)$/m) || [])[1] || '').trim();
+      const cover = icon ? ['png', 'jpg', 'jpeg', 'gif', 'webp'].map((e) => path.join(d, 'icons', `${icon}.${e}`)).find(exists) || null : null;
+      out.push({ id: `prism:${name}`, source: 'Minecraft', name: nm.trim(), dir: path.join(inst, name), cover, icon: !!cover, launch: { type: 'exe', exe, args: ['--launch', name] } });
     }
   }
   return out;
@@ -143,4 +161,4 @@ function processHint(game) {
   return null;
 }
 
-module.exports = { parseVdf, steamGames, epicGames, riotGames, prismInstances, scanAll, launch, processHint };
+module.exports = { steamCover, parseVdf, steamGames, epicGames, riotGames, prismInstances, scanAll, launch, processHint };

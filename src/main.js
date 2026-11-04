@@ -48,7 +48,7 @@ function log(msg) {
 const DEFAULTS = {
   startWithWindows: true,
   startHidden: true,
-  appearance: { background: 'mica', theme: 'system' },
+  appearance: { background: 'acrylic', theme: 'system', v: 2 },
   alerts: { enabled: true, gpuTemp: 87, ram: 92, diskGB: 10 },
   overlay: { enabled: false, corner: 'tl', shortcut: 'CommandOrControl+Shift+O' },
   capture: { audio: true, shotKey: 'Control+Alt+S', recKey: 'Control+Alt+R' },
@@ -93,6 +93,8 @@ function deepMerge(a, b) {
 }
 
 let settings = loadSettings();
+// 2.2: il vecchio predefinito Mica diventa Acrilico, che lascia vedere lo sfondo animato
+if (!settings.appearance.v) { if (settings.appearance.background === 'mica') settings.appearance.background = 'acrylic'; settings.appearance.v = 2; }
 // i profili salvati sostituiscono quelli predefiniti solo se presenti
 for (const k of Object.keys(DEFAULT_PROFILES)) if (!settings.profiles[k]) settings.profiles[k] = DEFAULT_PROFILES[k];
 const mouse = new RazerMouse(HID, log);
@@ -314,13 +316,22 @@ function updateTray() {
 // Mica richiede Windows 11 (build 22000 o successiva).
 const micaSupported = process.platform === 'win32' && Number((os.release().split('.')[2]) || 0) >= 22000;
 
+// "acrylic" sfoca quello che c'è davvero dietro la finestra (anche Wallpaper Engine e altre finestre);
+// "mica" usa solo i colori dello sfondo statico del desktop.
+function material() {
+  if (!micaSupported) return 'none';
+  const b = settings.appearance.background;
+  return b === 'acrylic' || b === 'mica' ? b : 'none';
+}
+
 function applyTheme() {
   nativeTheme.themeSource = settings.appearance.theme || 'system';
   if (win && !win.isDestroyed() && process.platform === 'win32') {
     const dark = nativeTheme.shouldUseDarkColors;
     try { win.setTitleBarOverlay({ color: '#00000000', symbolColor: dark ? '#f3f4fa' : '#15161c', height: 46 }); } catch (e) {}
     if (micaSupported) {
-      try { win.setBackgroundMaterial(settings.appearance.background === 'mica' ? 'mica' : 'none'); } catch (e) {}
+      const m = material();
+      try { win.setBackgroundColor(m === 'none' ? (dark ? '#101119' : '#e9ecf6') : '#00000000'); win.setBackgroundMaterial(m); } catch (e) {}
     }
   }
 }
@@ -328,7 +339,8 @@ function applyTheme() {
 function createWindow(show = true) {
   nativeTheme.themeSource = settings.appearance.theme || 'system';
   const dark = nativeTheme.shouldUseDarkColors;
-  const mica = micaSupported && settings.appearance.background === 'mica';
+  const mat = material();
+  const mica = mat !== 'none';
   win = new BrowserWindow({
     width: 1180, height: 780, minWidth: 940, minHeight: 640,
     show: false,
@@ -336,7 +348,7 @@ function createWindow(show = true) {
     icon: iconPath(),
     autoHideMenuBar: true,
     backgroundColor: mica ? '#00000000' : dark ? '#101119' : '#e9ecf6',
-    backgroundMaterial: mica ? 'mica' : 'none',
+    backgroundMaterial: mat,
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#00000000', symbolColor: dark ? '#f3f4fa' : '#15161c', height: 46 },
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
@@ -606,6 +618,8 @@ app.whenReady().then(async () => {
   if (settings.overlay.enabled) setOverlay(true);
   setInterval(checkAlerts, 30 * 1000);
   setInterval(watchGames, 5000);
+  // avvia PowerShell in anticipo: la prima apertura di Sistema e Audio è subito pronta
+  if (!MOCK && sys.helper) setTimeout(() => { try { sys.helper.start(); } catch (e) {} }, 3000);
   if (process.env.UNICO_DEBUGJS) setTimeout(async () => { try { log('debugjs: ' + await win.webContents.executeJavaScript(process.env.UNICO_DEBUGJS)); } catch (e) { log('debugjs errore: ' + e.message); } quitting = true; app.quit(); }, 4000);
   if (process.env.UNICO_SHOT2) captureDemo(process.env.UNICO_SHOT2);
   if (process.env.UNICO_SHOTS) captureScreens(process.env.UNICO_SHOTS);

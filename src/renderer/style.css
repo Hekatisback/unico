@@ -56,7 +56,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 body.mica { background: transparent; }
-body.mica { --aurora-opacity: .35; }
+/* Con Mica/Acrilico il colore lo dà quello che c'è dietro la finestra: niente aurora sopra. */
+body.mica .aurora { display: none; }
+body.acrylic { background: color-mix(in srgb, var(--base) 22%, transparent); }
 svg.defs { position: absolute; }
 a { color: var(--accent); }
 h1 { font: 600 30px/1.15 "Segoe UI Variable Display", "Segoe UI", sans-serif; margin: 0; letter-spacing: -.02em; }
@@ -492,3 +494,4 @@ body.recording .rec-state i { background: var(--bad); box-shadow: 0 0 8px var(--
   .dock button span { font-size: 10px; }
   .dock button { min-width: 48px; padding: 9px 8px 7px; }
 }
+.game .gcover img.icon { width: 46%; height: auto; aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 8px 18px rgba(0,0,0,.35)); }

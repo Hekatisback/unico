@@ -201,7 +201,7 @@ function renderGames() {
   }
   $('#games-grid').innerHTML = list.map((g) => `
     <div class="game glass" data-id="${esc(g.id)}">
-      <div class="gcover" data-h="${hue(g.name)}">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy">` : `<span>${esc(initials(g.name))}</span>`}</div>
+      <div class="gcover" data-h="${hue(g.name)}">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy"${g.icon ? ' class="icon"' : ''}>` : `<span>${esc(initials(g.name))}</span>`}</div>
       <div class="game-info"><b title="${esc(g.name)}">${esc(g.name)}</b><small>${esc(g.source)}${played[g.id] ? ` · ${ago(played[g.id])}` : ''}</small></div>
       <button class="play" title="Gioca">${ICON.play}</button>
       ${g.id.startsWith('custom:') ? `<button class="icon-btn rm" title="Togli dalla libreria">${ICON.x}</button>` : ''}

@@ -603,7 +603,9 @@ $('#ph-connect').onclick = (e) => act(e.target, async () => { const r = await ap
 
 // ----- impostazioni ------------------------------------------------------------
 function applyLook() {
-  document.body.classList.toggle('mica', CFG.appearance.background === 'mica' && META.micaSupported);
+  const bg = META.micaSupported ? CFG.appearance.background : 'aurora';
+  document.body.classList.toggle('mica', bg === 'mica' || bg === 'acrylic');
+  document.body.classList.toggle('acrylic', bg === 'acrylic');
 }
 $('#set-bg').onchange = async () => { const r = await api.saveSettings({ appearance: { background: $('#set-bg').value } }); CFG = r.settings; applyLook(); status('saved'); };
 $('#set-theme').onchange = async () => { const r = await api.saveSettings({ appearance: { theme: $('#set-theme').value } }); CFG = r.settings; status('saved'); };
@@ -635,7 +637,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
   $('#set-notify').value = String(CFG.notifyBelow);
   $('#set-bg').value = CFG.appearance.background;
   $('#set-theme').value = CFG.appearance.theme;
-  if (!META.micaSupported) $('#set-bg option[value=mica]').textContent = 'Mica (richiede Windows 11)';
+  if (!META.micaSupported) { $('#set-bg option[value=mica]').textContent = 'Mica (richiede Windows 11)'; $('#set-bg option[value=acrylic]').textContent = 'Trasparente (richiede Windows 11)'; }
   applyLook();
   fillPhone();
   loadPhones();
