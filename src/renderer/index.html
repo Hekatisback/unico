@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: blob: file:; media-src 'self' blob:">
+  <title>Unico</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Filtro "vetro liquido": rifrazione con aberrazione cromatica sui pannelli (Chromium) -->
+  <svg class="defs" width="0" height="0" aria-hidden="true">
+    <filter id="liquid" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.011" numOctaves="2" seed="11" result="noise"/>
+      <feGaussianBlur in="noise" stdDeviation="2.5" result="map"/>
+      <feDisplacementMap in="SourceGraphic" in2="map" scale="34" xChannelSelector="R" yChannelSelector="G" result="dr"/>
+      <feColorMatrix in="dr" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0" result="r"/>
+      <feDisplacementMap in="SourceGraphic" in2="map" scale="40" xChannelSelector="R" yChannelSelector="G" result="dg"/>
+      <feColorMatrix in="dg" type="matrix" values="0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0" result="g"/>
+      <feDisplacementMap in="SourceGraphic" in2="map" scale="47" xChannelSelector="R" yChannelSelector="G" result="db"/>
+      <feColorMatrix in="db" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0" result="b"/>
+      <feBlend in="r" in2="g" mode="screen" result="rg"/>
+      <feBlend in="rg" in2="b" mode="screen"/>
+    </filter>
+  </svg>
+
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+  <header class="titlebar">
+    <div class="brand"><span class="logo">U</span>Unico</div>
+    <div class="titlebar-status" id="sync"></div>
+    <button class="icon-btn glass" id="refresh" title="Aggiorna i dispositivi"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg></button>
+  </header>
+
+  <main id="view">
+    <!-- ======================= HOME ======================= -->
+    <section class="page active" id="page-home">
+      <div class="hero">
+        <h1 id="greeting">Le tue periferiche</h1>
+        <p class="sub" id="home-sub">Tutto in un posto, senza programmi pesanti in background.</p>
+      </div>
+      <div class="device-grid">
+        <article class="device glass refract" data-go="mouse">
+          <div class="device-top"><span class="device-ico"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v4"/></svg></span><span class="chip" id="chip-mouse">…</span></div>
+          <div class="ring" id="ring-mouse"><span>—</span></div>
+          <h2>Mouse</h2><p class="muted" id="sum-mouse">Ricerca…</p>
+          <div class="quick" id="quick-mouse"></div>
+        </article>
+        <article class="device glass refract" data-go="headset">
+          <div class="device-top"><span class="device-ico"><svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="2"/><rect x="17" y="14" width="4" height="6" rx="2"/></svg></span><span class="chip" id="chip-headset">…</span></div>
+          <div class="ring" id="ring-headset"><span>—</span></div>
+          <h2>Cuffie</h2><p class="muted" id="sum-headset">Ricerca…</p>
+          <div class="quick" id="quick-headset"></div>
+        </article>
+        <article class="device glass refract" data-go="keyboard">
+          <div class="device-top"><span class="device-ico"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></span><span class="chip" id="chip-keyboard">…</span></div>
+          <div class="ring" id="ring-keyboard"><span>—</span></div>
+          <h2>Tastiera</h2><p class="muted" id="sum-keyboard">Ricerca…</p>
+          <div class="quick" id="quick-keyboard"></div>
+        </article>
+      </div>
+      <div class="home-row">
+        <div class="card glass">
+          <div class="card-head"><div><h3>Profili</h3><p class="muted" id="profile-note">Un clic cambia energia, EQ, luci e overlay insieme.</p></div><a href="#" class="muted" data-settings-tab="profiles">Modifica</a></div>
+          <div class="chips big" id="profiles"></div>
+        </div>
+        <div class="card glass">
+          <h3>Azioni rapide</h3>
+          <div class="actions">
+            <button class="act-btn" id="qa-lock"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Blocca</button>
+            <button class="act-btn" id="qa-sleep"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>Sospendi</button>
+            <button class="act-btn" id="qa-overlay"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M6 8h5M6 11h3"/></svg><span>Overlay</span></button>
+            <button class="act-btn" id="qa-shutdown"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.3 6.3a8 8 0 1 0 11.4 0"/></svg><span id="qa-shutdown-label">Spegni tra…</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="home-row">
+        <div class="card glass media" id="media-card">
+          <div class="cover" id="media-cover"></div>
+          <div class="media-info"><span class="muted" id="media-app">Musica</span><b id="media-title">Niente in riproduzione</b><span class="muted" id="media-artist"></span></div>
+          <div class="media-ctl">
+            <button class="icon-btn glass" data-media="prev" title="Precedente"><svg viewBox="0 0 24 24"><path d="M6 5v14M18 6l-9 6 9 6z"/></svg></button>
+            <button class="icon-btn glass big" data-media="playpause" title="Play/Pausa" id="media-play"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg></button>
+            <button class="icon-btn glass" data-media="next" title="Successiva"><svg viewBox="0 0 24 24"><path d="M18 5v14M6 6l9 6-9 6z"/></svg></button>
+          </div>
+        </div>
+        <div class="card glass">
+          <div class="card-head"><h3>Luminosità schermi</h3><button class="btn ghost small" id="bright-reload">Aggiorna</button></div>
+          <div id="brightness" class="bright-list"><p class="muted">Ricerca schermi…</p></div>
+        </div>
+      </div>
+      <div class="tips" id="tips"></div>
+    </section>
+
+    <!-- ======================= MOUSE ======================= -->
+    <section class="page" id="page-mouse">
+      <div class="page-head">
+        <div><h1>Razer Basilisk V3 X</h1><p class="sub" id="mouse-sub">HyperSpeed</p></div>
+        <div class="tabs glass" data-tabs="mouse"><span class="blob"></span><button data-tab="sens" class="on">Sensibilità</button><button data-tab="light">Luce</button><button data-tab="power">Energia</button></div>
+      </div>
+      <div class="empty glass" id="mouse-offline"></div>
+      <div class="tab-body" id="mouse-body">
+        <div class="tab on" data-tab="sens">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Stadi DPI</h3><p class="muted">Il tasto sotto la rotella passa da uno stadio all'altro. Tocca un cerchio per scegliere quello attivo.</p></div>
+              <button class="btn primary" id="stages-save">Salva sul mouse</button></div>
+            <div class="stages" id="stages"></div>
+            <div class="row"><button class="btn ghost" id="stage-add">＋ Stadio</button><button class="btn ghost" id="stage-remove">－ Stadio</button></div>
+          </div>
+          <div class="card glass">
+            <div class="card-head"><div><h3>Frequenza di polling</h3><p class="muted">1000 Hz è il più reattivo, 500 Hz fa durare di più le pile.</p></div></div>
+            <div class="tabs glass small" id="poll"><span class="blob"></span><button data-v="125">125 Hz</button><button data-v="500">500 Hz</button><button data-v="1000">1000 Hz</button></div>
+          </div>
+        </div>
+        <div class="tab" data-tab="light">
+          <div class="card glass">
+            <h3>Luce della rotella</h3>
+            <div class="chips" id="scroll-effect">
+              <button data-v="static">Fissa</button><button data-v="breathing">Respiro</button><button data-v="breathingDual">Respiro 2 colori</button>
+              <button data-v="breathingRandom">Respiro casuale</button><button data-v="reactive">Reattiva</button><button data-v="spectrum">Spettro</button><button data-v="off">Spenta</button>
+            </div>
+            <div class="fields">
+              <label class="field" data-show="static breathing breathingDual reactive">Colore <input type="color" id="scroll-color"></label>
+              <label class="field" data-show="breathingDual">Secondo colore <input type="color" id="scroll-color2"></label>
+              <label class="field" data-show="reactive">Durata reazione <select id="scroll-speed"><option value="1">Breve</option><option value="2">Media</option><option value="3">Lunga</option><option value="4">Molto lunga</option></select></label>
+              <label class="field grow">Luminosità <input type="range" id="scroll-bright" min="0" max="255"></label>
+            </div>
+          </div>
+        </div>
+        <div class="tab" data-tab="power">
+          <div class="card glass">
+            <h3>Risparmio energetico</h3>
+            <label class="field">Standby dopo <b id="idle-out"></b><input type="range" id="idle" min="60" max="900" step="30"></label>
+            <label class="field">Avvisami con le pile sotto <select id="lowbat"><option value="5">5%</option><option value="10">10%</option><option value="15">15%</option><option value="20">20%</option><option value="25">25%</option></select></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= CUFFIE ======================= -->
+    <section class="page" id="page-headset">
+      <div class="page-head">
+        <div><h1>Corsair HS80 RGB</h1><p class="sub" id="headset-sub">Wireless</p></div>
+        <div class="tabs glass" data-tabs="headset"><span class="blob"></span><button data-tab="audio" class="on">Audio</button><button data-tab="light">Luce</button><button data-tab="power">Energia e info</button></div>
+      </div>
+      <div class="empty glass" id="headset-offline"></div>
+      <div class="tab-body" id="headset-body">
+        <div class="tab on" data-tab="audio">
+          <div class="card glass" id="eq-card">
+            <div class="card-head"><div><h3>Equalizzatore</h3><p class="muted" id="eq-note">Si applica solo alle HS80.</p></div>
+              <label class="switch"><input type="checkbox" id="eq-on"><span></span></label></div>
+            <div id="eq-missing" class="notice">Serve <b>Equalizer APO</b>, gratuito. <a href="#" id="eq-download">Scaricalo</a>, nell'installazione spunta le HS80, riavvia e torna qui.</div>
+            <div id="eq-panel">
+              <div class="chips" id="eq-presets"></div>
+              <div class="eq" id="eq-bands"></div>
+            </div>
+          </div>
+          <div class="two">
+            <div class="card glass">
+              <div class="card-head"><div><h3>Rotella del volume</h3><p class="muted">Una pressione breve cambia preset EQ, come in iCUE. Richiede la luce gestita da Unico.</p></div>
+                <label class="switch"><input type="checkbox" id="hs-wheel"><span></span></label></div>
+            </div>
+            <div class="card glass">
+              <h3>Sidetone</h3>
+              <p class="muted">Si regola da Windows: <b>Altre impostazioni audio</b> → Riproduzione → HS80 → Proprietà → <b>Livelli</b> → cursore "Microfono". In alternativa: Registrazione → microfono HS80 → Ascolta.</p>
+            </div>
+          </div>
+        </div>
+        <div class="tab" data-tab="light">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Illuminazione</h3><p class="muted">Spenta: arcobaleno di fabbrica. Accesa: gli effetti qui sotto, finché Unico è aperto.</p></div>
+              <label class="switch"><input type="checkbox" id="hs-leds"><span></span></label></div>
+            <div id="hs-light-controls">
+              <div class="chips" id="hs-effect"><button data-v="static">Statico</button><button data-v="breathing">Respiro</button><button data-v="colorshift">Cambio colore</button><button data-v="rainbow">Arcobaleno</button><button data-v="off">Spento</button></div>
+              <div class="fields">
+                <label class="field" data-show="static breathing colorshift">Colore <input type="color" id="hs-color"></label>
+                <label class="field" data-show="colorshift">Secondo colore <input type="color" id="hs-color2"></label>
+                <label class="field grow" data-show="breathing colorshift rainbow">Velocità <input type="range" id="hs-speed" min="1" max="5"></label>
+                <label class="field grow">Luminosità <input type="range" id="hs-bright" min="0" max="100"></label>
+              </div>
+              <div class="fields">
+                <label class="field">LED di stato <select id="hs-status"><option value="battery">Colore della batteria</option><option value="color">Colore fisso</option><option value="off">Spento</option></select></label>
+                <label class="field" data-when="hs-status=color">Colore stato <input type="color" id="hs-status-color"></label>
+                <label class="field">LED microfono <select id="hs-mic"><option value="mute">Rosso se disattivato</option><option value="color">Colore fisso</option><option value="off">Spento</option></select></label>
+                <label class="field" data-when="hs-mic=color">Colore microfono <input type="color" id="hs-mic-color"></label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab" data-tab="power">
+          <div class="two">
+            <div class="card glass"><h3>Stato</h3><dl class="facts" id="headset-facts"></dl></div>
+            <div class="card glass">
+              <h3>Spegnimento automatico</h3>
+              <p class="muted">Le cuffie si spengono da sole se non ricevono audio per questo tempo.</p>
+              <div class="chips" id="hs-sleep"><button data-v="0">Mai</button><button data-v="5">5 min</button><button data-v="10">10 min</button><button data-v="15">15 min</button><button data-v="30">30 min</button><button data-v="60">1 ora</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= TASTIERA ======================= -->
+    <section class="page" id="page-keyboard">
+      <div class="page-head">
+        <div><h1>AULA F75 Max</h1><p class="sub" id="keyboard-sub"></p></div>
+        <div class="tabs glass" data-tabs="keyboard"><span class="blob"></span><button data-tab="light" class="on">Luce</button><button data-tab="screen">Schermo</button><button data-tab="keys">Tasti ed energia</button></div>
+      </div>
+      <div class="empty glass" id="keyboard-offline"></div>
+      <div class="tab-body" id="keyboard-body">
+        <div class="tab on" data-tab="light">
+          <div class="card glass">
+            <h3>Effetto</h3>
+            <div class="chips modes" id="kb-mode"></div>
+            <div class="fields">
+              <label class="field">Colore <input type="color" id="kb-color"></label>
+              <label class="switch inline"><input type="checkbox" id="kb-multi"><span></span>Multicolore</label>
+              <label class="field grow">Luminosità <input type="range" id="kb-bright" min="1" max="5"></label>
+              <label class="field grow">Velocità <input type="range" id="kb-speed" min="1" max="5"></label>
+              <label class="field">Direzione <select id="kb-dir"><option value="0">→</option><option value="1">←</option><option value="2">↑</option><option value="3">↓</option></select></label>
+            </div>
+          </div>
+        </div>
+        <div class="tab" data-tab="screen">
+          <div class="card glass">
+            <div class="screen-row">
+              <div class="screen-frame"><canvas id="kb-preview" width="128" height="128"></canvas></div>
+              <div class="screen-controls">
+                <h3>Immagine sullo schermo</h3>
+                <p class="muted">Un'immagine o una GIF animata, fino a 255 frame. Serve il cavo USB-C.</p>
+                <div class="fields">
+                  <label class="btn ghost file">Scegli immagine o GIF<input type="file" id="kb-file" accept="image/png,image/jpeg,image/gif,image/webp,image/bmp"></label>
+                  <label class="field">Adattamento <select id="kb-fit"><option value="fill">Riempi</option><option value="fit">Intera</option><option value="stretch">Allunga</option></select></label>
+                </div>
+                <p class="muted" id="kb-file-info"></p>
+                <div class="progress"><div id="kb-progress"></div></div>
+                <div class="row"><button class="btn primary" id="kb-screen-apply" disabled>Carica sulla tastiera</button><button class="btn ghost" id="kb-clock">Sincronizza l'ora</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tab" data-tab="keys">
+          <div class="two">
+            <div class="card glass">
+              <h3>Energia e reattività</h3>
+              <label class="field">Standby dopo <select id="kb-sleep"><option value="0">Mai</option><option value="1">1 minuto</option><option value="2">5 minuti</option><option value="3">30 minuti</option></select></label>
+              <label class="field">Reattività <select id="kb-resp"><option value="1">1 · massima</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5 · risparmio</option></select></label>
+              <label class="switch inline"><input type="checkbox" id="kb-fn"><span></span>Inverti Fn (F1–F12 multimediali)</label>
+            </div>
+            <div class="card glass">
+              <h3>Gioco</h3>
+              <label class="switch inline"><input type="checkbox" id="kb-game"><span></span>Modalità gioco: blocca Win, Alt+Tab e Alt+F4</label>
+              <div id="kb-locks">
+                <label class="switch inline"><input type="checkbox" id="kb-win"><span></span>Solo il tasto Windows</label>
+                <label class="switch inline"><input type="checkbox" id="kb-alttab"><span></span>Solo Alt+Tab</label>
+                <label class="switch inline"><input type="checkbox" id="kb-altf4"><span></span>Solo Alt+F4</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= TELEFONO ======================= -->
+    <section class="page" id="page-phone">
+      <div class="page-head">
+        <div><h1>Telefono</h1><p class="sub" id="phone-sub">Lo schermo del tuo Android sul PC, da usare con mouse e tastiera.</p></div>
+        <div class="tabs glass" data-tabs="phone"><span class="blob"></span><button data-tab="mirror" class="on">Mirroring</button><button data-tab="notif">Notifiche</button><button data-tab="options">Opzioni</button><button data-tab="connect">Collegamento</button></div>
+      </div>
+      <div class="tab-body" id="phone-body">
+        <div class="tab on" data-tab="mirror">
+          <div id="phone-list" class="phone-list"></div>
+          <div class="empty glass show" id="phone-empty">
+            <h3>Nessun telefono collegato</h3>
+            <ol>
+              <li>Collega il telefono al PC con il cavo USB</li>
+              <li>Se è la prima volta, attiva il <b>Debug USB</b>: vedi la scheda <a href="#" data-phone-tab="connect">Collegamento</a></li>
+              <li>Sul telefono conferma <b>Consenti debug USB</b> (spunta "Consenti sempre")</li>
+            </ol>
+          </div>
+        </div>
+        <div class="tab" data-tab="notif">
+          <div class="two">
+            <div class="card glass">
+              <div class="card-head"><div><h3>Notifiche del telefono sul PC</h3><p class="muted">WhatsApp, Telegram, messaggi e il resto arrivano come notifiche di Windows. Funziona con il telefono collegato (cavo o Wi-Fi), anche senza mirroring.</p></div><label class="switch"><input type="checkbox" id="pn-on"><span></span></label></div>
+              <div id="pn-list" class="pn-list"></div>
+            </div>
+            <div class="card glass">
+              <h3>Scrivi sul telefono</h3>
+              <p class="muted">Scrivi qui e il testo viene digitato nel campo aperto sul telefono (chat, ricerca…). Durante il mirroring gli appunti sono già condivisi: <kbd>Ctrl</kbd>+<kbd>C</kbd> sul PC e incolli sul telefono, e viceversa.</p>
+              <textarea id="pn-text" rows="4" placeholder="Scrivi qui…"></textarea>
+              <div class="row"><button class="btn primary" id="pn-send">Scrivi sul telefono</button><button class="btn ghost" id="pn-paste">Usa gli appunti del PC</button></div>
+              <h3 class="spaced">App silenziate</h3>
+              <p class="muted">Tocca un'app per silenziarla: quelle barrate non mandano notifiche al PC.</p>
+              <div id="pn-muted" class="chips wrap"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab" data-tab="options">
+          <div class="two">
+            <div class="card glass">
+              <h3>Qualità</h3>
+              <label class="field">Risoluzione massima <div class="chips" id="ph-size"><button data-v="0">Originale</button><button data-v="1920">1920</button><button data-v="1280">1280</button><button data-v="1024">1024</button></div></label>
+              <label class="field">Qualità video <div class="chips" id="ph-bitrate"><button data-v="4">Leggera</button><button data-v="8">Normale</button><button data-v="16">Alta</button><button data-v="24">Massima</button></div></label>
+              <label class="field">Fotogrammi al secondo <div class="chips" id="ph-fps"><button data-v="30">30</button><button data-v="60">60</button><button data-v="120">120</button></div></label>
+              <p class="muted">In Wi-Fi, se scatta, scegli "Leggera" e 1280.</p>
+            </div>
+            <div class="card glass">
+              <h3>Comportamento</h3>
+              <label class="switch inline"><input type="checkbox" id="ph-audio"><span></span>Audio del telefono sul PC (Android 11+)</label>
+              <label class="switch inline"><input type="checkbox" id="ph-control"><span></span>Controlla il telefono con mouse e tastiera</label>
+              <label class="switch inline"><input type="checkbox" id="ph-keyboard"><span></span>Tastiera fisica (scrivi come su un PC)</label>
+              <label class="switch inline"><input type="checkbox" id="ph-screenoff"><span></span>Spegni lo schermo del telefono durante il mirroring</label>
+              <label class="switch inline"><input type="checkbox" id="ph-awake"><span></span>Tieni il telefono sveglio mentre è collegato</label>
+              <label class="switch inline"><input type="checkbox" id="ph-top"><span></span>Finestra sempre in primo piano</label>
+              <label class="switch inline"><input type="checkbox" id="ph-full"><span></span>Apri a schermo intero</label>
+              <label class="switch inline"><input type="checkbox" id="ph-record"><span></span>Registra un video in Video</label>
+            </div>
+          </div>
+          <div class="card glass">
+            <h3>Scorciatoie nella finestra del telefono</h3>
+            <div class="keys">
+              <span><kbd>Alt</kbd>+<kbd>H</kbd> Home</span><span><kbd>Alt</kbd>+<kbd>B</kbd> Indietro</span><span><kbd>Alt</kbd>+<kbd>S</kbd> App recenti</span>
+              <span><kbd>Alt</kbd>+<kbd>P</kbd> Accensione</span><span><kbd>Alt</kbd>+<kbd>O</kbd> Spegni schermo</span><span><kbd>Alt</kbd>+<kbd>F</kbd> Schermo intero</span>
+              <span><kbd>Alt</kbd>+<kbd>↑↓</kbd> Volume</span><span><kbd>Alt</kbd>+<kbd>R</kbd> Ruota</span><span><kbd>Alt</kbd>+<kbd>N</kbd> Notifiche</span><span><kbd>Alt</kbd>+<kbd>V</kbd> Incolla dal PC</span><span>Tasto destro = Indietro</span>
+              <span>Trascina un file o un APK nella finestra per copiarlo o installarlo</span>
+            </div>
+          </div>
+        </div>
+        <div class="tab" data-tab="connect">
+          <div class="two">
+            <div class="card glass">
+              <h3>Prima volta: attiva il debug USB</h3>
+              <ol class="steps">
+                <li>Sul telefono apri <b>Impostazioni → Info sul telefono → Informazioni software</b></li>
+                <li>Tocca <b>Numero build</b> 7 volte finché compare "Modalità sviluppatore attivata"</li>
+                <li>Torna in <b>Impostazioni → Opzioni sviluppatore</b> e attiva <b>Debug USB</b></li>
+                <li>Collega il cavo e conferma <b>Consenti debug USB</b>, spuntando "Consenti sempre"</li>
+              </ol>
+              <p class="muted">Su Samsung "Numero build" è in Info sul telefono → Informazioni software.</p>
+            </div>
+            <div class="card glass">
+              <h3>Senza cavo (Wi-Fi)</h3>
+              <p class="muted"><b>Il modo più semplice:</b> collega una volta col cavo e premi "Passa a Wi-Fi" nella scheda Mirroring, poi stacca il cavo. PC e telefono devono essere sulla stessa rete.</p>
+              <p class="muted"><b>Solo Wi-Fi (Android 11+):</b> Opzioni sviluppatore → <b>Debug wireless</b> → "Associa dispositivo con codice", poi inserisci qui indirizzo e codice.</p>
+              <div class="fields">
+                <label class="field grow">Indirizzo di associazione <input type="text" id="ph-pair-addr" placeholder="192.168.1.42:37123"></label>
+                <label class="field">Codice <input type="text" id="ph-pair-code" placeholder="123456" maxlength="6"></label>
+                <button class="btn ghost" id="ph-pair">Associa</button>
+              </div>
+              <div class="fields">
+                <label class="field grow">Indirizzo del telefono (in Debug wireless) <input type="text" id="ph-conn-addr" placeholder="192.168.1.42:41234"></label>
+                <button class="btn primary" id="ph-connect">Connetti</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ======================= AUDIO ======================= -->
+    <section class="page" id="page-audio">
+      <div class="page-head">
+        <div><h1>Audio</h1><p class="sub">Dove esce il suono, il volume di ogni app e il microfono.</p></div>
+        <div class="tabs glass" data-tabs="audio"><span class="blob"></span><button data-tab="out" class="on">Uscita</button><button data-tab="apps">App</button><button data-tab="mic">Microfono</button></div>
+      </div>
+      <div class="tab-body" id="audio-body">
+        <div class="tab on" data-tab="out">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Uscita audio</h3><p class="muted">Tocca un dispositivo per farci uscire tutto il suono (anche le chiamate).</p></div></div>
+            <div id="au-out" class="au-list"><p class="muted">Caricamento…</p></div>
+          </div>
+        </div>
+        <div class="tab" data-tab="apps">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Volume per app</h3><p class="muted">Come il mixer di Windows, ma con il livello in tempo reale. Le app compaiono quando stanno usando l'audio.</p></div></div>
+            <div id="au-apps" class="au-list"><p class="muted">Caricamento…</p></div>
+          </div>
+        </div>
+        <div class="tab" data-tab="mic">
+          <div class="two">
+            <div class="card glass">
+              <h3>Microfono in uso</h3>
+              <div id="au-mic" class="au-list"><p class="muted">Caricamento…</p></div>
+            </div>
+            <div class="card glass">
+              <h3>Prova il microfono</h3>
+              <p class="muted">Parla: la barra si muove se il microfono ti sente. "Registra 5 secondi" ti fa riascoltare la tua voce.</p>
+              <div class="meter big"><div id="mic-level"></div></div>
+              <div class="row"><button class="btn ghost" id="mic-listen">Ascolta il livello</button><button class="btn primary" id="mic-rec">Registra 5 secondi</button></div>
+              <p class="muted" id="mic-note"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= GIOCHI ======================= -->
+    <section class="page" id="page-games">
+      <div class="page-head">
+        <div><h1>Giochi</h1><p class="sub" id="games-sub">Tutti i tuoi giochi in un posto. Avviandoli si attiva il profilo Gioco.</p></div>
+        <div class="tabs glass" data-tabs="games"><span class="blob"></span><button data-tab="lib" class="on">Libreria</button><button data-tab="sessions">Sessioni</button></div>
+      </div>
+      <div class="tab-body" id="games-body">
+        <div class="tab on" data-tab="lib">
+          <div class="row lib-tools"><input type="text" id="games-search" placeholder="Cerca un gioco…"><span class="grow"></span><button class="btn ghost" id="games-add">Aggiungi gioco</button><button class="btn ghost" id="games-scan">Aggiorna</button></div>
+          <div id="games-grid" class="games-grid"><p class="muted">Cerco i giochi in Steam, Epic, Riot e Prism Launcher…</p></div>
+        </div>
+        <div class="tab" data-tab="sessions">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Sessioni di gioco</h3><p class="muted">Registrate in automatico quando apri un gioco riconosciuto (lista in Impostazioni → Profili): durata, uso medio e temperatura massima della GPU.</p></div></div>
+            <div id="sess-now"></div>
+            <table class="procs"><thead><tr><th>Gioco</th><th>Quando</th><th class="num">Durata</th><th class="num">CPU media</th><th class="num">GPU media</th><th class="num">GPU max</th></tr></thead><tbody id="sess-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= STRUMENTI ======================= -->
+    <section class="page" id="page-tools">
+      <div class="page-head">
+        <div><h1>Strumenti</h1><p class="sub">Appunti, promemoria e cattura dello schermo.</p></div>
+        <div class="tabs glass" data-tabs="tools"><span class="blob"></span><button data-tab="clip" class="on">Appunti</button><button data-tab="rem">Promemoria</button><button data-tab="cap">Cattura</button></div>
+      </div>
+      <div class="tab-body" id="tools-body">
+        <div class="tab on" data-tab="clip">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Cronologia appunti</h3><p class="muted">Gli ultimi 50 testi copiati. Clicca per ricopiarli; la puntina li tiene in cima. Restano solo finché Unico è aperto.</p></div>
+              <div class="row"><label class="switch inline"><input type="checkbox" id="clip-on"><span></span>Attiva</label><button class="btn ghost" id="clip-clear">Svuota</button></div></div>
+            <input type="text" id="clip-search" placeholder="Cerca negli appunti…">
+            <div id="clip-list" class="clip-list"></div>
+          </div>
+        </div>
+        <div class="tab" data-tab="rem">
+          <div class="two">
+            <div class="card glass">
+              <h3>Timer</h3>
+              <div class="chips" id="timer-quick"><button data-v="5">5 min</button><button data-v="10">10 min</button><button data-v="15">15 min</button><button data-v="25">25 min</button><button data-v="45">45 min</button><button data-v="60">1 ora</button></div>
+              <div class="fields"><label class="field">Minuti <input type="number" id="timer-min" min="1" max="1440" value="20"></label><label class="field grow">Etichetta <input type="text" id="timer-label" placeholder="Pizza nel forno"></label><button class="btn primary" id="timer-add">Avvia</button></div>
+            </div>
+            <div class="card glass">
+              <h3>Promemoria</h3>
+              <div class="fields"><label class="field grow">Cosa <input type="text" id="rem-text" placeholder="Chiamare il dentista"></label></div>
+              <div class="fields"><label class="field">Quando <input type="datetime-local" id="rem-at"></label><label class="switch inline"><input type="checkbox" id="rem-daily"><span></span>Ogni giorno</label><button class="btn primary" id="rem-add">Aggiungi</button></div>
+            </div>
+          </div>
+          <div class="card glass"><h3>In programma</h3><div id="rem-list" class="rem-list"></div></div>
+        </div>
+        <div class="tab" data-tab="cap">
+          <div class="two">
+            <div class="card glass tile">
+              <h3>Screenshot</h3>
+              <p class="muted">Cattura lo schermo dove si trova il mouse, lo salva in Immagini\Screenshots\Unico e lo copia negli appunti. Scorciatoia: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd></p>
+              <div class="row"><button class="btn primary" id="cap-shot">Fai screenshot</button><button class="btn ghost" data-open="shot">Apri cartella</button></div>
+            </div>
+            <div class="card glass tile">
+              <h3>Registra lo schermo</h3>
+              <p class="muted">Video con l'audio del PC, salvato in Video\Unico. Scorciatoia per iniziare e fermare: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd></p>
+              <label class="switch inline"><input type="checkbox" id="cap-audio"><span></span>Registra anche l'audio del PC</label>
+              <div class="row"><button class="btn primary" id="cap-rec">Inizia a registrare</button><button class="btn ghost" data-open="video">Apri cartella</button></div>
+              <p class="rec-state" id="rec-state"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= SISTEMA ======================= -->
+    <section class="page" id="page-system">
+      <div class="page-head">
+        <div><h1>Sistema</h1><p class="sub" id="system-sub">HP Victus · Windows</p></div>
+        <div class="tabs glass" data-tabs="system"><span class="blob"></span><button data-tab="res" class="on">Risorse</button><button data-tab="procs">Processi</button><button data-tab="startup">Avvio</button><button data-tab="clean">Pulizia</button><button data-tab="net">Rete</button></div>
+      </div>
+      <div class="tab-body" id="system-body">
+        <div class="tab on" data-tab="res">
+          <div class="res-grid">
+            <div class="card glass tile"><div class="tile-head"><h3>CPU</h3><b class="big-num" id="r-cpu">—</b></div><canvas class="spark" id="sp-cpu" height="60"></canvas><div class="cores" id="r-cores"></div><p class="muted" id="r-cpu-sub"></p></div>
+            <div class="card glass tile"><div class="tile-head"><h3>GPU</h3><b class="big-num" id="r-gpu">—</b></div><canvas class="spark" id="sp-gpu" height="60"></canvas><dl class="facts small" id="r-gpu-facts"></dl></div>
+            <div class="card glass tile"><div class="tile-head"><h3>Memoria</h3><b class="big-num" id="r-ram">—</b></div><canvas class="spark" id="sp-ram" height="60"></canvas><p class="muted" id="r-ram-sub"></p></div>
+            <div class="card glass tile"><div class="tile-head"><h3>Rete</h3><b class="big-num small" id="r-net">—</b></div><canvas class="spark" id="sp-net" height="60"></canvas><p class="muted" id="r-net-sub"></p></div>
+            <div class="card glass tile"><div class="tile-head"><h3>Disco C</h3><b class="big-num small" id="r-disk">—</b></div><div class="bar"><div id="r-disk-bar"></div></div><p class="muted" id="r-disk-sub"></p></div>
+            <div class="card glass tile"><div class="tile-head"><h3>PC</h3><b class="big-num small" id="r-up">—</b></div><dl class="facts small" id="r-pc-facts"></dl></div>
+          </div>
+          <div class="card glass">
+            <div class="card-head"><div><h3>Overlay in gioco</h3><p class="muted">Un riquadro sempre in primo piano con CPU, GPU, temperature e RAM. Scorciatoia: <kbd>Ctrl</kbd>+<kbd>Maiusc</kbd>+<kbd>O</kbd>. Si vede sopra i giochi in finestra o "a schermo intero senza bordi"; per gli FPS usa l'overlay NVIDIA (<kbd>Alt</kbd>+<kbd>R</kbd>).</p></div>
+              <label class="switch"><input type="checkbox" id="ov-on"><span></span></label></div>
+            <div class="chips" id="ov-corner"><button data-v="tl">In alto a sinistra</button><button data-v="tr">In alto a destra</button><button data-v="bl">In basso a sinistra</button><button data-v="br">In basso a destra</button></div>
+          </div>
+        </div>
+        <div class="tab" data-tab="procs">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Gestione attività</h3><p class="muted">Programmi raggruppati per app, aggiornati ogni 3 secondi. I processi di Windows sono protetti.</p></div>
+              <input type="text" id="proc-search" placeholder="Cerca…"></div>
+            <table class="procs"><thead><tr><th data-sort="name">App</th><th data-sort="cpu" class="num">CPU</th><th data-sort="mem" class="num">RAM</th><th data-sort="io" class="num">Disco</th><th></th></tr></thead><tbody id="proc-body"><tr><td colspan="5" class="muted">Caricamento…</td></tr></tbody></table>
+          </div>
+        </div>
+        <div class="tab" data-tab="startup">
+          <div class="card glass">
+            <div class="card-head"><div><h3>App all'avvio</h3><p class="muted">Meno app all'avvio = Windows più veloce ad accendersi. Le voci "Tutti gli utenti" si cambiano solo come amministratore.</p></div></div>
+            <div id="startup-list" class="startup-list"><p class="muted">Caricamento…</p></div>
+          </div>
+        </div>
+        <div class="tab" data-tab="clean">
+          <div class="clean-grid">
+            <div class="card glass tile"><h3>File temporanei</h3><b class="big-num small" id="c-temp">—</b><p class="muted">File di installazioni e programmi, più vecchi di 2 giorni.</p><button class="btn ghost" id="c-temp-btn">Pulisci</button></div>
+            <div class="card glass tile"><h3>Cestino</h3><b class="big-num small" id="c-bin">—</b><p class="muted" id="c-bin-sub"></p><button class="btn ghost" id="c-bin-btn">Svuota</button></div>
+            <div class="card glass tile"><h3>Download</h3><b class="big-num small" id="c-dl">—</b><p class="muted">I file più grandi sono elencati qui sotto.</p><button class="btn ghost" id="c-scan">Analizza di nuovo</button></div>
+          </div>
+          <div class="card glass">
+            <h3>File grandi nei Download</h3>
+            <p class="muted">"Sposta nel Cestino" si può sempre annullare dal Cestino.</p>
+            <div id="c-big" class="big-files"></div>
+          </div>
+        </div>
+        <div class="tab" data-tab="net">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Diagnosi rete</h3><p class="muted">Misura il ritardo verso il router, internet e il server di gioco, e ti dice dove nasce il lag.</p></div>
+              <div class="fields"><label class="field">Server di gioco <select id="net-game"><option value="104.160.141.3">League of Legends EUW</option><option value="1.1.1.1">Nessuno (solo internet)</option></select></label><button class="btn primary" id="net-run">Analizza</button></div></div>
+            <div id="net-results" class="net-results"></div>
+            <p class="verdict" id="net-verdict"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= IMPOSTAZIONI ======================= -->
+    <section class="page" id="page-settings">
+      <div class="page-head"><div><h1>Impostazioni</h1><p class="sub" id="version"></p></div>
+        <div class="tabs glass" data-tabs="settings"><span class="blob"></span><button data-tab="general" class="on">Generale</button><button data-tab="profiles">Profili</button><button data-tab="diag">Diagnostica</button></div></div>
+      <div class="tab-body" id="settings-body">
+        <div class="tab on" data-tab="general">
+          <div class="two">
+            <div class="card glass">
+              <h3>Aspetto</h3>
+              <label class="field">Sfondo <select id="set-bg"><option value="mica">Mica (trasparente, Windows 11)</option><option value="aurora">Aurora colorata</option></select></label>
+              <label class="field">Tema <select id="set-theme"><option value="system">Come Windows</option><option value="light">Chiaro</option><option value="dark">Scuro</option></select></label>
+            </div>
+            <div class="card glass">
+              <h3>Avvio e batterie</h3>
+              <label class="switch inline"><input type="checkbox" id="set-start"><span></span>Avvia con Windows, nella barra delle applicazioni</label>
+              <label class="field">Avvisa con batteria sotto <select id="set-notify"><option value="10">10%</option><option value="15">15%</option><option value="20">20%</option><option value="25">25%</option></select></label>
+            </div>
+          </div>
+          <div class="two">
+            <div class="card glass">
+              <div class="card-head"><div><h3>Aggiornamenti</h3><p class="muted" id="upd-text">Unico controlla da solo ogni 6 ore e scarica in silenzio.</p></div></div>
+              <div class="row"><button class="btn ghost" id="upd-check">Controlla ora</button><button class="btn primary" id="upd-install" hidden>Riavvia e aggiorna</button></div>
+            </div>
+            <div class="card glass">
+              <div class="card-head"><div><h3>Backup impostazioni</h3><p class="muted">Profili, luci, equalizzatore, giochi e promemoria in un file .json da conservare o portare su un altro PC.</p></div></div>
+              <div class="row"><button class="btn ghost" id="bk-export">Esporta backup</button><button class="btn ghost" id="bk-import">Ripristina backup</button></div>
+            </div>
+          </div>
+          <div class="card glass">
+            <div class="card-head"><div><h3>Avvisi di sistema</h3><p class="muted">Notifiche quando qualcosa va oltre il limite. Il controllo è leggero: una volta ogni 30 secondi.</p></div><label class="switch"><input type="checkbox" id="al-on"><span></span></label></div>
+            <div class="fields">
+              <label class="field">GPU oltre <select id="al-gpu"><option value="80">80 °C</option><option value="85">85 °C</option><option value="87">87 °C</option><option value="90">90 °C</option></select></label>
+              <label class="field">RAM oltre <select id="al-ram"><option value="85">85%</option><option value="90">90%</option><option value="92">92%</option><option value="95">95%</option></select></label>
+              <label class="field">Disco C sotto <select id="al-disk"><option value="5">5 GB liberi</option><option value="10">10 GB liberi</option><option value="20">20 GB liberi</option><option value="50">50 GB liberi</option></select></label>
+            </div>
+          </div>
+        </div>
+        <div class="tab" data-tab="profiles">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Profilo automatico per i giochi</h3><p class="muted">Quando apri uno di questi programmi Unico passa a "Gioco", e quando lo chiudi torna al profilo di prima.</p></div><label class="switch"><input type="checkbox" id="auto-on"><span></span></label></div>
+            <label class="field">Giochi (nomi dei processi, separati da virgola) <input type="text" id="auto-games"></label>
+            <p class="muted">"javaw" è Minecraft (Prism Launcher). Il nome esatto lo trovi in Sistema → Processi.</p>
+          </div>
+          <div class="profile-grid" id="profile-editor"></div>
+        </div>
+        <div class="tab" data-tab="diag">
+          <div class="card glass">
+            <div class="card-head"><div><h3>Diagnostica</h3><p class="muted">Se un dispositivo non viene letto, copia la diagnostica e incollala a Claude.</p></div>
+              <div class="row"><button class="btn ghost" id="diag-log">Cartella log</button><button class="btn primary" id="diag-copy">Copia diagnostica</button></div></div>
+            <table id="diag"><thead><tr><th>ID</th><th>Prodotto</th><th>Usage</th><th>If</th></tr></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="dock glass refract" id="dock">
+    <span class="blob"></span>
+    <button data-page="home" class="on" title="Panoramica"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
+    <button data-page="mouse" title="Mouse"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v4"/></svg><span>Mouse</span><i class="dot" id="dot-mouse"></i></button>
+    <button data-page="headset" title="Cuffie"><svg viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="2"/><rect x="17" y="14" width="4" height="6" rx="2"/></svg><span>Cuffie</span><i class="dot" id="dot-headset"></i></button>
+    <button data-page="keyboard" title="Tastiera"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg><span>Tastiera</span><i class="dot" id="dot-keyboard"></i></button>
+    <button data-page="phone" title="Telefono"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg><span>Telefono</span><i class="dot" id="dot-phone"></i></button>
+    <button data-page="audio" title="Audio"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span>Audio</span></button>
+    <button data-page="games" title="Giochi"><svg viewBox="0 0 24 24"><path d="M6 8h12a4 4 0 0 1 4 4v1.5a3.5 3.5 0 0 1-6.3 2.1L14.5 14h-5l-1.2 1.6A3.5 3.5 0 0 1 2 13.5V12a4 4 0 0 1 4-4z"/><path d="M7 11v3M5.5 12.5h3M16 11.5h.01M18 13h.01"/></svg><span>Giochi</span></button>
+    <button data-page="tools" title="Strumenti"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.6 17.2a1.4 1.4 0 0 0 2 2l5.7-5.7a4 4 0 0 0 5.2-5.4l-2.4 2.4-2.1-.6-.6-2.1z"/></svg><span>Strumenti</span></button>
+    <button data-page="system" title="Sistema"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg><span>Sistema</span></button>
+    <button data-page="settings" title="Impostazioni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Opzioni</span></button>
+  </nav>
+
+  <div id="toast" class="glass"></div>
+  <div class="modal" id="modal"><div class="modal-card glass refract"><h3 id="modal-title"></h3><p class="muted" id="modal-text"></p><div class="modal-extra" id="modal-extra"></div><div class="row end"><button class="btn ghost" id="modal-no">Annulla</button><button class="btn primary" id="modal-yes">Conferma</button></div></div></div>
+  <script src="app.js"></script>
+  <script src="extra.js"></script>
+  <script src="more.js"></script>
+</body>
+</html>

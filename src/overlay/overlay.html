@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>Unico overlay</title>
+  <link rel="stylesheet" href="overlay.css">
+</head>
+<body>
+  <div class="ov" id="ov">
+    <div class="row"><span class="k">CPU</span><span class="v" id="cpu">—</span><span class="s" id="cpuT"></span></div>
+    <div class="row"><span class="k">GPU</span><span class="v" id="gpu">—</span><span class="s" id="gpuT"></span></div>
+    <div class="row"><span class="k">VRAM</span><span class="v" id="vram">—</span></div>
+    <div class="row"><span class="k">RAM</span><span class="v" id="ram">—</span></div>
+    <div class="row dim"><span class="k" id="clock"></span><span class="s" id="power"></span></div>
+  </div>
+  <script src="overlay.js"></script>
+</body>
+</html>

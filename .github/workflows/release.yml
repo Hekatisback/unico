@@ -1,0 +1,45 @@
+name: Release
+
+# Parte quando viene creato un tag "v2.1.0", "v2.2.0"...: prova, costruisce l'installer
+# per Windows e lo pubblica nelle Release. Unico, già installato, lo scarica da solo.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      SCRCPY_VERSION: '5.0.1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Dipendenze
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: scrcpy (mirroring del telefono)
+        shell: pwsh
+        run: |
+          $v = $env:SCRCPY_VERSION
+          Invoke-WebRequest "https://github.com/Genymobile/scrcpy/releases/download/v$v/scrcpy-win64-v$v.zip" -OutFile scrcpy.zip
+          Expand-Archive scrcpy.zip -DestinationPath scrcpy-tmp
+          New-Item -ItemType Directory -Force vendor/scrcpy | Out-Null
+          Copy-Item "scrcpy-tmp/scrcpy-win64-v$v/*" vendor/scrcpy -Recurse -Force
+          Get-ChildItem vendor/scrcpy
+
+      - name: Build e pubblicazione
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis zip --x64 --publish always -c.win.signAndEditExecutable=true

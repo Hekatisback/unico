@@ -1,0 +1,79 @@
+{
+  "name": "unico",
+  "productName": "Unico",
+  "version": "2.1.0",
+  "description": "Un solo programma per mouse Razer Basilisk V3 X HyperSpeed, cuffie Corsair HS80 RGB Wireless e tastiera AULA F75 Max",
+  "main": "src/main.js",
+  "author": "Hekat",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/protocol.test.js test/drivers.test.js test/features.test.js",
+    "icon": "node tools/make-icon.js",
+    "dist": "electron-builder --win nsis zip --x64",
+    "release": "electron-builder --win nsis zip --x64 --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "node-hid": "^3.4.0"
+  },
+  "build": {
+    "appId": "it.hekat.unico",
+    "productName": "Unico",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/node-hid/**",
+      "src/system/*.ps1"
+    ],
+    "npmRebuild": false,
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "icon": "assets/icon.ico",
+      "signAndEditExecutable": false,
+      "artifactName": "Unico-${version}-Windows.${ext}"
+    },
+    "extraResources": [
+      {
+        "from": "vendor/scrcpy",
+        "to": "scrcpy"
+      }
+    ],
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Unico-Setup-${version}.${ext}",
+      "shortcutName": "Unico",
+      "createDesktopShortcut": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Hekatisback",
+        "repo": "unico",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^38.8.6",
+    "electron-builder": "^26.18.0",
+    "pe-library": "^2.0.1",
+    "resedit": "^2.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hekatisback/unico.git"
+  }
+}
