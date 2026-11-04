@@ -422,6 +422,14 @@ function cleanOldStartup() {
   });
 }
 
+// Dopo un aggiornamento l'installer a volte resta aperto in sottofondo e al giro dopo blocca
+// il nuovo aggiornamento ("Unico non può essere chiuso"). Se Unico è partito, è già finito: lo chiudo.
+function closeStaleInstallers() {
+  if (process.platform !== 'win32' || !app.isPackaged) return;
+  const ps = "Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath -like '*\\unico-updater\\pending\\*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; $_.Name }";
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { windowsHide: true, timeout: 20000 }, (e, out) => { const n = String(out || '').trim(); if (n) log(`aggiornamento: chiuso installer rimasto aperto (${n.replace(/\s+/g, ', ')})`); });
+}
+
 function applyLoginItem() {
   try {
     app.setLoginItemSettings({ openAtLogin: !!settings.startWithWindows, args: ['--hidden'] });
@@ -652,6 +660,7 @@ app.whenReady().then(async () => {
   log(`--- avvio Unico ${app.getVersion()} (electron ${process.versions.electron}, hidapi ${safe(() => HID.getHidapiVersion())})`);
   applyLoginItem();
   setTimeout(cleanOldStartup, 5000);
+  setTimeout(closeStaleInstallers, 20000);
   createTray();
   const hidden = process.argv.includes('--hidden') && settings.startHidden;
   createWindow(!hidden);
