@@ -121,6 +121,8 @@ fillProfiles = function fillProfilesPlus() {
 };
 $('#auto-games').addEventListener('change', () => setTimeout(renderGameMap, 400));
 
+$('#app-quit').onclick = async () => { if (await confirmBox('Chiudere Unico?', 'Si chiude del tutto (anche dall\'icona vicino all\'orologio). Lo riapri dal menu Start.', { yes: 'Esci' })) api.quitApp(); };
+
 // --- Finestra compatta -------------------------------------------------------------------------
 $('#qa-mini').onclick = () => api.miniToggle();
 

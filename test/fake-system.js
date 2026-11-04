@@ -38,7 +38,7 @@ class FakeSystem {
   }
   async kill(pids, name) { return name === 'dwm' ? { ok: false, error: 'processo di Windows' } : { ok: true }; }
   async closeNames(names) { return { closed: names.length }; }
-  async procNames() { return ['explorer', 'Discord', this.gameRunning ? 'League of Legends' : 'chrome']; }
+  async procNames() { return ['explorer', 'Discord', this.gameRunning ? 'League of Legends' : 'chrome', ...(process.env.UNICO_FAKE_ICUE ? ['iCUE'] : [])]; }
   async cleanupScan() {
     return { temp: 1.2e9, crash: 3.1e8, downloads: 8.3e10, recycle: { count: 42, bytes: 2.4e9 }, big: [
       { path: 'C:\\Users\\utente\\Downloads\\Gioco-installer.zip', name: 'Gioco-installer.zip', bytes: 1.13e10, modified: '2026-10-16T21:11:00' },

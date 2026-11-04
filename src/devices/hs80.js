@@ -65,6 +65,30 @@ class Hs80 {
     this.queue = Promise.resolve();
     this.ledTimer = null;
     this.ledState = null;
+    this.blocked = false; // true quando iCUE è aperto: Unico non manda niente alle cuffie
+  }
+
+  // Con iCUE aperto due programmi parlerebbero alle cuffie insieme (risposte mescolate, microfono
+  // lasciato in uno stato sbagliato): Unico si fa da parte del tutto finché iCUE resta aperto.
+  async setBlocked(on) {
+    if (on === this.blocked) return;
+    this.blocked = on;
+    this.log(`hs80: ${on ? 'iCUE aperto, Unico lascia le cuffie a iCUE' : 'iCUE chiuso, Unico può usare le cuffie'}`);
+    if (on) {
+      if (this.ledTimer) clearInterval(this.ledTimer);
+      this.ledTimer = null;
+      this.ledState = null;
+      await this.closeEvents().catch(() => {});
+      if (this.dev) { try { await this.dev.close(); } catch (e) {} this.dev = null; }
+    }
+  }
+
+  // Rimette ricevitore e cuffie in modalità normale (di fabbrica). Unico lo fa all'avvio e alla
+  // chiusura se non sta gestendo le luci, così niente resta bloccato in modalità software.
+  async ensureHardwareMode() {
+    if (this.blocked) return { ok: true, skipped: true };
+    const ok = await this.setMode(MODE_HARDWARE);
+    return { ok };
   }
 
   get target() { return this.pid === PID_WIRED ? TARGET_RECEIVER : TARGET_HEADSET; }
@@ -96,7 +120,8 @@ class Hs80 {
   }
 
   async disconnect() {
-    this.stopLeds(false);
+    // non ferma le luci: il prossimo frame riapre il collegamento; dopo 50 errori di fila le luci
+    // si fermano e le cuffie tornano in modalità normale
     if (!this.dev) return;
     try { await this.dev.close(); } catch (e) {}
     this.dev = null;
@@ -127,6 +152,7 @@ class Hs80 {
 
   ask(pkt, opts) {
     return this.run(async () => {
+      if (this.blocked) return { blocked: true };
       if (!(await this.connect())) return { offline: true };
       try {
         const r = await this.transact(pkt, opts);
@@ -158,6 +184,7 @@ class Hs80 {
   }
 
   async battery() {
+    if (this.blocked) return { connected: true, managed: 'iCUE' };
     const b = await this.batteryPercent();
     if (b.offline) return { connected: false, cableOff: this.pid === PID_WIRED_OFF };
     // ricevitore presente ma le cuffie non rispondono: sono spente (o fuori portata)
@@ -168,6 +195,7 @@ class Hs80 {
 
   async status() {
     const out = await this.battery();
+    if (out.managed) return { ...out, name: 'Corsair HS80 RGB Wireless' };
     if (!out.connected || out.off) return { ...out, name: 'Corsair HS80 RGB Wireless' };
     out.name = 'Corsair HS80 RGB Wireless';
     out.wired = this.pid === PID_WIRED;
@@ -188,7 +216,7 @@ class Hs80 {
   async setMode(mode) {
     const a = await this.ask(req.set(TARGET_RECEIVER, PROP.MODE, mode));
     const b = this.pid === PID_WIRED ? a : await this.ask(req.set(this.target, PROP.MODE, mode));
-    return !(a.error || a.offline || b.error || b.offline);
+    return !(a.error || a.offline || a.blocked || b.error || b.offline || b.blocked);
   }
 
   // Le scritture funzionano solo in modalità software: si entra, si scrive, si torna in hardware
@@ -210,6 +238,7 @@ class Hs80 {
   // cfg = { effect: static|breathing|colorshift|rainbow|off, color, color2, speed 1-5,
   //         brightness 0-100, status: battery|color|off, statusColor, mic: mute|color|off, micColor }
   async startLighting(cfg, ctx) {
+    if (this.blocked) return { ok: false, error: 'Le cuffie sono gestite da iCUE: chiudilo per usare le luci di Unico' };
     await this.stopLighting(false);
     if (!(await this.setMode(MODE_SOFTWARE))) return { ok: false, error: 'cuffie non raggiungibili' };
     await this.ask(req.openLighting(this.target));
@@ -229,7 +258,7 @@ class Hs80 {
         const frame = computeFrame(st.cfg, (Date.now() - st.t0) / 1000, st.ctx.getBattery(), st.ctx.getMuted());
         const r = await this.ask(req.writeLeds(this.target, frame), { quiet: true });
         if (r.offline || r.error) st.fails = (st.fails || 0) + 1; else st.fails = 0;
-        if (st.fails > 50) { this.log('hs80: troppi errori, illuminazione software fermata'); await this.stopLighting(false); }
+        if (st.fails > 50) { this.log('hs80: troppi errori, illuminazione software fermata'); setTimeout(() => this.stopLighting(true).catch(() => {}), 0); }
       } finally { if (this.ledState) this.ledState.busy = false; }
     };
     await tick();
@@ -244,7 +273,7 @@ class Hs80 {
     this.ledTimer = null;
     this.ledState = null;
     await this.closeEvents();
-    if (restore && this.dev) await this.setMode(MODE_HARDWARE);
+    if (restore && !this.blocked) await this.setMode(MODE_HARDWARE);
     return { ok: true };
   }
 

@@ -162,7 +162,7 @@
           <div class="card glass" id="eq-card">
             <div class="card-head"><div><h3>Equalizzatore</h3><p class="muted" id="eq-note">Si applica solo alle HS80.</p></div>
               <label class="switch"><input type="checkbox" id="eq-on"><span></span></label></div>
-            <div id="eq-missing" class="notice">Serve <b>Equalizer APO</b>, gratuito. <a href="#" id="eq-download">Scaricalo</a>, nell'installazione spunta le HS80, riavvia e torna qui.</div>
+            <div id="eq-missing" class="notice">Serve <b>Equalizer APO</b>, gratuito. <a href="#" id="eq-download">Scaricalo</a>; nell'installazione, scheda <b>Playback devices</b>, spunta solo <b>Auricolare e microtelefono (HS80)</b>. <b>Non</b> spuntare niente in <b>Capture devices</b> (il microfono). Riavvia e torna qui.</div>
             <div id="eq-panel">
               <div class="chips" id="eq-presets"></div>
               <div class="eq" id="eq-bands"></div>
@@ -400,6 +400,7 @@
           <div class="two">
             <div class="card glass">
               <h3>Microfono in uso</h3>
+              <p class="muted">Solo da vedere: Unico non cambia mai il microfono. Per cambiarlo usa le impostazioni audio di Windows o iCUE.</p>
               <div id="au-mic" class="au-list"><p class="muted">Caricamento…</p></div>
             </div>
             <div class="card glass">
@@ -561,6 +562,7 @@
             <div class="card glass">
               <h3>Avvio e batterie</h3>
               <label class="switch inline"><input type="checkbox" id="set-start"><span></span>Avvia con Windows, nella barra delle applicazioni</label>
+              <div class="row"><button class="btn ghost small" id="app-quit">Esci da Unico</button><span class="muted">Chiude Unico del tutto e rimette le cuffie in modalità normale.</span></div>
               <label class="field">Avvisa con batteria sotto <select id="set-notify"><option value="10">10%</option><option value="15">15%</option><option value="20">20%</option><option value="25">25%</option></select></label>
             </div>
           </div>

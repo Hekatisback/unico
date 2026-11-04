@@ -131,11 +131,27 @@ test('aula 2.4G: lettura batteria nei due formati', () => {
 });
 
 test('eq: configurazione Equalizer APO', () => {
-  const c = apo.buildConfig([6, 5, 4, 2, 0, 0, 0, 0, 0, -3]);
-  assert.match(c, /Device: HS80/);
+  const c = apo.buildConfig([6, 5, 4, 2, 0, 0, 0, 0, 0, -3], '{12345678-1234-1234-1234-123456789abc}');
+  assert.match(c, /Device: \{12345678-1234-1234-1234-123456789abc\}/);
+  assert.doesNotMatch(c, /Device: HS80/);
   assert.match(c, /Preamp: -6\.0 dB/);
   assert.match(c, /GraphicEQ: 32 6\.0; 64 5\.0; .* 16000 -3\.0/);
   assert.match(c, /Device: all/);
+});
+
+test('eq: senza il GUID dell\'uscita non scrive niente (mai sul microfono)', () => {
+  const r = apo.apply([0, 0, 0, 0, 0, 0, 0, 0, 0, 0], true, 'HS80');
+  assert.equal(r.ok, false);
+});
+
+test('hs80: con iCUE aperto non manda niente alle cuffie', async () => {
+  const sent = [];
+  const h = new hs80.Hs80({ devicesAsync: async () => { sent.push('enum'); return []; } }, () => {});
+  await h.setBlocked(true);
+  assert.deepEqual(await h.ask(Buffer.alloc(64)), { blocked: true });
+  assert.deepEqual(await h.status(), { connected: true, managed: 'iCUE', name: 'Corsair HS80 RGB Wireless' });
+  assert.equal((await h.startLighting({}, {})).ok, false);
+  assert.deepEqual(sent, []);
 });
 
 test('hs80: motore effetti', () => {

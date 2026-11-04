@@ -354,7 +354,7 @@ function setup(ctx) {
   if (MOCK) upd = { status: 'latest', version: app.getVersion(), checkedAt: Date.now() };
   handle('update:get', async () => upd);
   handle('update:check', async () => { if (updater) await updater.checkForUpdates().catch((e) => setUpd({ status: 'error', error: e.message })); return upd; });
-  handle('update:install', async () => { if (updater && upd.status === 'ready') { ctx.prepareQuit(); updater.quitAndInstall(false, true); } return { ok: true }; });
+  handle('update:install', async () => { if (updater && upd.status === 'ready') { await ctx.prepareQuit(); updater.quitAndInstall(false, true); } return { ok: true }; });
 }
 
 module.exports = { setup };

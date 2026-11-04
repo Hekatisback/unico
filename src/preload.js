@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('unico', {
   eqApply: call('eq:apply'),
   saveSettings: call('app:settings'),
   setKey: call('app:setKey'),
+  quitApp: call('app:quit'),
   diagDevices: call('diag:devices'),
   diagCopy: call('diag:copy'),
   openLog: call('diag:openLog'),

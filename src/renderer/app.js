@@ -151,13 +151,15 @@ $('#refresh').onclick = async () => {
 // Rendering
 // =============================================================================
 const batteryColor = (p) => (p > 50 ? 'var(--ok)' : p > 15 ? 'var(--warn)' : 'var(--bad)');
-const online = (s) => s && s.connected && !s.asleep && !s.off;
+const online = (s) => s && s.connected && !s.asleep && !s.off && !s.managed;
 
 const OFFLINE = {
   mouse: (s) => s && s.asleep
     ? ['Il mouse è in standby', ['Muovi il mouse o premi un tasto', 'Poi tocca Riprova']]
     : ['Mouse non trovato', ['Collega il ricevitore HyperSpeed a una porta USB (meglio senza hub)', 'Sotto il mouse, sposta l\'interruttore su 2.4 GHz (non Bluetooth)', 'Chiudi Razer Synapse se è aperto', 'Se continua, Impostazioni → Copia diagnostica e incollala a Claude']],
-  headset: (s) => s && s.off
+  headset: (s) => s && s.managed
+    ? ['Le cuffie sono gestite da iCUE', ['iCUE è aperto: per non creare conflitti Unico non manda niente alle cuffie (audio e microfono restano a iCUE e Windows)', 'Per usare luci, spegnimento automatico e batteria da Unico chiudi iCUE, anche dall\'icona vicino all\'orologio']]
+    : s && s.off
     ? ['Le cuffie sono spente', ['Il ricevitore è collegato: accendi le cuffie tenendo premuto il tasto di accensione']]
     : s && s.cableOff ? ['Cavo collegato, cuffie spente', ['Accendi le cuffie']]
       : ['Cuffie non trovate', ['Collega il ricevitore wireless o il cavo USB', 'Accendi le cuffie', 'Chiudi completamente iCUE (anche da Gestione attività)']],
@@ -177,6 +179,7 @@ function renderEmpty(k, s) {
 
 function summary(k, s) {
   if (!s || !s.connected) return k === 'headset' && s && s.cableOff ? 'Cavo collegato, cuffie spente' : 'Non collegato';
+  if (s.managed) return `Gestite da ${s.managed}`;
   if (s.asleep) return s.lastBattery ? `In standby · ultima lettura alle ${new Date(s.lastBattery.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : 'In standby';
   if (s.off) return 'Cuffie spente';
   const p = [];
@@ -201,7 +204,7 @@ function render() {
     $(`#sum-${k}`).textContent = summary(k, s);
     const chip = $(`#chip-${k}`);
     chip.className = `chip ${online(s) ? 'on' : s && s.connected ? 'sleep' : ''}`;
-    chip.textContent = online(s) ? 'Collegato' : s && s.connected ? (s.asleep ? 'Standby' : 'Spento') : 'Assente';
+    chip.textContent = online(s) ? 'Collegato' : s && s.managed ? s.managed : s && s.connected ? (s.asleep ? 'Standby' : 'Spento') : 'Assente';
     $(`#dot-${k}`).className = `dot ${online(s) ? 'on' : s && s.connected ? 'sleep' : ''}`;
     renderEmpty(k, s);
   }

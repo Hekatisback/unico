@@ -101,6 +101,8 @@ function deepMerge(a, b) {
 }
 
 let settings = loadSettings();
+// 2.7: le luci delle cuffie gestite da Unico tornano spente (tenevano le cuffie in modalità software)
+if (!settings.fixV27) { settings.headset.customLeds = false; settings.fixV27 = true; }
 // 2.2: il vecchio predefinito Mica diventa Acrilico, che lascia vedere lo sfondo animato
 if (!settings.appearance.v) { if (settings.appearance.background === 'mica') settings.appearance.background = 'acrylic'; settings.appearance.v = 2; }
 // i profili salvati sostituiscono quelli predefiniti solo se presenti
@@ -215,7 +217,7 @@ const profileDeps = {
     const gains = apo.PRESETS[name];
     if (!gains) return { ok: false, error: 'preset sconosciuto' };
     if (!apo.status().installed) return { ok: true };
-    const r = apo.apply(gains, true);
+    const r = await eqWrite(gains, true);
     if (r.ok) { settings.eq = { enabled: true, preset: name, gains }; state.eq = { ...apo.status(), ...settings.eq }; }
     return r;
   },
@@ -259,6 +261,7 @@ async function watchGames() {
   const A = settings.autoProfile;
   let names = [];
   try { names = await sys.procNames(); } catch (e) { return; }
+  await checkIcue(names);
   const game = detectGame(names, A.games);
   if (feat.onGame) feat.onGame(game);
   if ((game || null) !== (gameRunning || null)) {
@@ -483,11 +486,11 @@ function headsetCtx() {
 }
 
 // Pressione della rotella del volume: passa al preset EQ successivo (come in iCUE).
-function cycleEqPreset() {
+async function cycleEqPreset() {
   const names = Object.keys(apo.PRESETS);
   const cur = names.indexOf(settings.eq.preset);
   const next = names[(cur + 1) % names.length];
-  const r = apo.apply(apo.PRESETS[next], true);
+  const r = await eqWrite(apo.PRESETS[next], true);
   if (!r.ok) { log(`eq rotella: ${r.error}`); return; }
   settings.eq = { enabled: true, preset: next, gains: apo.PRESETS[next] };
   saveSettings();
@@ -498,10 +501,40 @@ function cycleEqPreset() {
 }
 
 async function restoreHeadsetLeds() {
+  if (headset.blocked) return;
   if (settings.headset.customLeds && state.headset.connected && !state.headset.off) {
     const r = await headset.startLighting(settings.headset.lighting, headsetCtx());
     state.headset.customLeds = r.ok;
+  } else if (state.headset.connected && !state.headset.off) {
+    // se una volta precedente Unico era stato chiuso a forza, le cuffie potrebbero essere rimaste in
+    // modalità software: le rimetto sempre in modalità normale
+    await headset.ensureHardwareMode().catch(() => {});
   }
+}
+
+// L'equalizzatore va solo sull'uscita audio delle cuffie, indicata col suo GUID: con un nome generico
+// ("HS80") Equalizer APO lo applicherebbe anche al microfono.
+async function hs80OutputGuid() {
+  try {
+    const list = await sys.audioDevices('render');
+    const d = (list || []).find((x) => /HS80/i.test(x.name || ''));
+    const m = d && String(d.id).match(/\{[0-9a-f-]{36}\}$/i);
+    return m ? m[0] : null;
+  } catch (e) { return null; }
+}
+async function eqWrite(gains, enabled) {
+  return apo.apply(gains, enabled, enabled ? await hs80OutputGuid() : null);
+}
+
+// iCUE aperto = le cuffie sono sue
+let icueOpen = null;
+async function checkIcue(names) {
+  const open = (names || []).some((n) => /^icue$/i.test(String(n)));
+  if (open === icueOpen) return;
+  icueOpen = open;
+  await headset.setBlocked(open);
+  state.headset = open ? { connected: true, managed: 'iCUE', name: 'Corsair HS80 RGB Wireless' } : state.headset;
+  if (!open) { await refresh(['headset']); await restoreHeadsetLeds(); } else push();
 }
 
 // --- IPC ----------------------------------------------------------------------
@@ -618,7 +651,7 @@ handle('phone:import', async ({ serial, count }) => {
 });
 
 handle('eq:apply', async ({ enabled, preset, gains }) => {
-  const r = apo.apply(gains, enabled);
+  const r = await eqWrite(gains, enabled);
   if (r.ok) { settings.eq = { enabled, preset, gains }; saveSettings(); }
   state.eq = { ...apo.status(), ...settings.eq };
   push();
@@ -634,6 +667,7 @@ handle('app:settings', async (patch) => {
   return { ok: true, settings };
 });
 
+handle('app:quit', async () => { quitting = true; setTimeout(() => app.quit(), 100); return { ok: true }; });
 // Sostituisce un valore intero (es. la lista dei profili) invece di unirlo a quello vecchio
 handle('app:setKey', async ({ key, value }) => {
   const parts = String(key).split('.');
@@ -675,7 +709,10 @@ const feat = {
   getWin: () => win,
   showWindow: () => showWindow(),
   activateProfile: (id) => activateProfile(id),
-  prepareQuit: () => { quitting = true; },
+  prepareQuit: async () => {
+    quitting = true;
+    if (headset.ledTimer) await Promise.race([headset.stopLighting(true).catch(() => {}), new Promise((r) => setTimeout(r, 1500))]);
+  },
   replaceSettings: (s) => {
     settings = deepMerge(structuredClone(DEFAULTS), s);
     saveSettings();
@@ -722,6 +759,7 @@ app.whenReady().then(async () => {
   createTray();
   const hidden = process.argv.includes('--hidden') && settings.startHidden;
   createWindow(!hidden);
+  try { await checkIcue(await Promise.race([sys.procNames(), new Promise((r) => setTimeout(() => r(null), 8000))])); } catch (e) {}
   await refresh();
   await restoreHeadsetLeds();
   setInterval(refreshBatteries, 60 * 1000);

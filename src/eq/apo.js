@@ -21,7 +21,7 @@ function configDir() {
   return path.join(pf, 'EqualizerAPO', 'config');
 }
 
-function buildConfig(gains, deviceFilter = 'HS80') {
+function buildConfig(gains, deviceFilter) {
   const g = BANDS.map((f, i) => Math.max(-12, Math.min(12, Number(gains[i]) || 0)));
   const preamp = -Math.max(0, ...g);
   return [
@@ -42,15 +42,24 @@ function status() {
   return { installed: true, linked: cfg.split(/\r?\n/).some((l) => l.trim() === INCLUDE_LINE) };
 }
 
-function apply(gains, enabled = true) {
+// deviceFilter: il GUID dell'uscita audio delle cuffie ({...}). Mai un nome generico come "HS80",
+// che in Equalizer APO vale anche per il microfono.
+function apply(gains, enabled = true, deviceFilter = null) {
   const dir = configDir();
   const main = path.join(dir, 'config.txt');
   if (!fs.existsSync(main)) return { ok: false, error: 'Equalizer APO non è installato' };
+  if (enabled && !/^\{[0-9a-f-]{36}\}$/i.test(String(deviceFilter || ''))) return { ok: false, error: 'Uscita audio delle cuffie non trovata: accendi le cuffie e riprova' };
   try {
-    fs.writeFileSync(path.join(dir, INCLUDE_FILE), enabled ? buildConfig(gains) : '# Unico: EQ disattivato\r\n');
     const cfg = fs.readFileSync(main, 'utf8');
-    if (!cfg.split(/\r?\n/).some((l) => l.trim() === INCLUDE_LINE)) {
-      fs.writeFileSync(main, cfg.replace(/\s*$/, '') + `\r\n${INCLUDE_LINE}\r\n`);
+    const lines = cfg.split(/\r?\n/);
+    const linked = lines.some((l) => l.trim() === INCLUDE_LINE);
+    if (enabled) {
+      fs.writeFileSync(path.join(dir, INCLUDE_FILE), buildConfig(gains, deviceFilter));
+      if (!linked) fs.writeFileSync(main, cfg.replace(/\s*$/, '') + `\r\n${INCLUDE_LINE}\r\n`);
+    } else {
+      // EQ spento: Unico si toglie del tutto dalla configurazione di Equalizer APO
+      if (linked) fs.writeFileSync(main, lines.filter((l) => l.trim() !== INCLUDE_LINE).join('\r\n'));
+      try { fs.unlinkSync(path.join(dir, INCLUDE_FILE)); } catch (e) {}
     }
     return { ok: true };
   } catch (e) {
