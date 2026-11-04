@@ -343,8 +343,9 @@ function setup(ctx) {
     const saved = S().mini || {};
     miniWin = new BrowserWindow({
       width: 320, height: 470, x: saved.x != null ? saved.x : wa.x + wa.width - 340, y: saved.y != null ? saved.y : wa.y + 20,
-      frame: false, resizable: false, maximizable: false, minimizable: false, skipTaskbar: false, alwaysOnTop: saved.top !== false, title: 'Unico mini',
-      backgroundColor: '#00000000', backgroundMaterial: ctx.material() === 'none' ? 'none' : 'acrylic', icon: iconPath(),
+      // con frame:false l'acrilico di Windows non disegna il contenuto: serve la cornice nascosta come nella finestra principale
+      titleBarStyle: 'hidden', resizable: false, maximizable: false, minimizable: false, fullscreenable: false, skipTaskbar: false, alwaysOnTop: saved.top !== false, title: 'Unico mini',
+      backgroundColor: ctx.material() === 'none' ? '#16171f' : '#00000000', backgroundMaterial: ctx.material() === 'none' ? 'none' : 'acrylic', icon: iconPath(),
       webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
     });
     miniWin.loadFile(path.join(__dirname, 'mini', 'mini.html'));
