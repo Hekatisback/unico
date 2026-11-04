@@ -160,7 +160,8 @@ class Hs80 {
   async battery() {
     const b = await this.batteryPercent();
     if (b.offline) return { connected: false, cableOff: this.pid === PID_WIRED_OFF };
-    if (b.off || b.refused) return { connected: true, off: true };
+    // ricevitore presente ma le cuffie non rispondono: sono spente (o fuori portata)
+    if (b.off || b.refused || (b.error && b.percent == null)) return { connected: true, off: true };
     const st = await this.ask(req.get(this.target, PROP.BATTERY_STATUS));
     return { connected: true, battery: b.percent, charging: st.value ? batteryStatusName(st.value[0]) : 'unknown', error: b.error };
   }

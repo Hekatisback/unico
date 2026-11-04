@@ -639,7 +639,8 @@ app.on('before-quit', async (e) => {
   if (headset.ledTimer) {
     e.preventDefault();
     quitting = true;
-    await headset.stopLighting(true).catch(() => {});
+    // al massimo 1,2 s: se le cuffie non rispondono Unico deve chiudersi lo stesso (serve anche agli aggiornamenti)
+    await Promise.race([headset.stopLighting(true).catch(() => {}), new Promise((r) => setTimeout(r, 1200))]);
     headset.ledTimer = null;
     app.quit();
   }

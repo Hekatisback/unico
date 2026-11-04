@@ -492,6 +492,7 @@ function moreInit() {
   $('#cap-audio').checked = !(CFG.capture && CFG.capture.audio === false);
   $('#pn-on').checked = !!(CFG.phoneNotif && CFG.phoneNotif.enabled);
   defaultRemTime();
+  if (currentPage === 'home') api.sysWatch(true);
   api.updateGet().then(renderUpdate);
   api.remList().then((r) => { remItems = r; });
 }
