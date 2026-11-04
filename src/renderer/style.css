@@ -512,3 +512,19 @@ body.recording .rec-state i { background: var(--bad); box-shadow: 0 0 8px var(--
 .pulse .pu-next { margin-left: auto; text-align: right; max-width: 40%; }
 .pulse .pu-next b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .game .gcover.black { background: #000; }
+.game .edit { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.45); color: #fff; opacity: 0; transition: opacity .2s; }
+.game:hover .edit { opacity: 1; }
+.picker-card { width: min(1000px, 92vw); max-height: 86vh; display: flex; flex-direction: column; gap: 12px; padding: 22px; border-radius: 28px; }
+.picker-head { display: flex; justify-content: space-between; align-items: flex-start; }
+#pk-query { width: 280px; }
+#pk-src button:disabled { opacity: .4; pointer-events: none; }
+.pk-hint { margin: 0; font-size: 12.5px; color: var(--muted); }
+.pk-grid { flex: 1; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; padding: 4px; min-height: 220px; align-content: start; }
+.pk-item { all: unset; position: relative; aspect-ratio: 2 / 3; border-radius: 16px; overflow: hidden; cursor: pointer; background: rgba(127,127,127,.15); transition: transform .2s cubic-bezier(.3,1.4,.5,1), box-shadow .2s; }
+.pk-item:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+.pk-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pk-item span { position: absolute; left: 6px; bottom: 6px; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; color: #fff; background: rgba(0,0,0,.55); }
+.pk-item.busy { opacity: .5; pointer-events: none; }
+.pk-loading { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: center; padding: 60px 0; }
+.pk-loading i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: pulse 1s infinite; }
+.pk-loading i:nth-child(2) { animation-delay: .15s; } .pk-loading i:nth-child(3) { animation-delay: .3s; }

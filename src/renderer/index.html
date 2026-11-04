@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: blob: file:; media-src 'self' blob:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: blob: file: https:; media-src 'self' blob:">
   <title>Unico</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -603,6 +603,13 @@
   </nav>
 
   <div id="toast" class="glass"></div>
+  <div class="modal" id="picker"><div class="picker-card glass refract">
+    <div class="picker-head"><div><h3 id="pk-title">Copertina</h3><p class="muted" id="pk-sub">Scegli un'immagine dal catalogo</p></div><button class="icon-btn" id="pk-close" title="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="row"><input type="text" id="pk-query" placeholder="Cerca con un altro nome…"><button class="btn ghost" id="pk-search">Cerca</button><span class="grow"></span><div class="chips" id="pk-src"><button data-v="all" class="on">Tutte</button><button data-v="SteamGridDB">SteamGridDB</button><button data-v="IGN">IGN</button><button data-v="Steam">Steam</button><button data-v="Wikipedia">Wikipedia</button></div></div>
+    <p class="pk-hint" id="pk-hint"></p>
+    <div class="pk-grid" id="pk-grid"></div>
+    <div class="row end"><button class="btn ghost" id="pk-file">Usa un file dal PC…</button><button class="btn ghost" id="pk-auto">Copertina automatica</button></div>
+  </div></div>
   <div class="modal" id="modal"><div class="modal-card glass refract"><h3 id="modal-title"></h3><p class="muted" id="modal-text"></p><div class="modal-extra" id="modal-extra"></div><div class="row end"><button class="btn ghost" id="modal-no">Annulla</button><button class="btn primary" id="modal-yes">Conferma</button></div></div></div>
   <script src="app.js"></script>
   <script src="extra.js"></script>

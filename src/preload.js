@@ -66,6 +66,8 @@ contextBridge.exposeInMainWorld('unico', {
   gamesRemoveCustom: call('games:removeCustom'),
   gamesSessions: call('games:sessions'),
   gamesSetCover: call('games:setCover'),
+  gamesCatalog: call('games:catalog'),
+  gamesPickCover: call('games:pickCover'),
   gamesClearCover: call('games:clearCover'),
   gamesRetryCovers: call('games:retryCovers'),
   clipList: call('clip:list'),

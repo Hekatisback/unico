@@ -5,7 +5,7 @@ const { clipboard, desktopCapturer, dialog, globalShortcut, Notification, screen
 const fs = require('fs');
 const path = require('path');
 const games = require('./system/games');
-const { Covers } = require('./system/covers');
+const { Covers, catalog: catalogFn } = require('./system/covers');
 const { pathToFileURL } = require('url');
 
 function setup(ctx) {
@@ -58,6 +58,20 @@ function setup(ctx) {
     if (r.canceled || !r.filePaths[0]) return { ok: true, changed: false };
     covers.setCustom(id, r.filePaths[0]);
     return { ok: true, changed: true };
+  });
+  handle('games:catalog', async ({ id, query }) => {
+    const g = (library || []).find((x) => x.id === id);
+    if (!g) return { ok: false, error: 'Gioco non trovato' };
+    const name = (query || g.name).replace(/\s*\(.*?\)\s*$/, '').trim();
+    if (MOCK) return { ok: true, name, sgdb: false, items: require('../test/fake-system').fakeCatalog(name) };
+    const r = await catalogFn(name, { appid: query ? null : g.appid, sgdbKey: (S().steamGridDbKey || '').trim(), log });
+    return { ok: true, name, ...r };
+  });
+  handle('games:pickCover', async ({ id, url }) => {
+    if (!/^https:\/\//.test(url || '')) return { ok: false, error: 'Indirizzo non valido' };
+    if (MOCK) return { ok: true };
+    await covers.setFromUrl(id, url);
+    return { ok: true };
   });
   handle('games:clearCover', async (id) => { covers.clearCustom(id); return { ok: true }; });
   handle('games:retryCovers', async () => { covers.forgetMisses(); fillCovers(); return { ok: true }; });

@@ -86,6 +86,61 @@ async function fromWikipedia(name) {
 const MISS_V = 4;
 // cambiando le fonti si riprovano i giochi non trovati
 
+// Catalogo da cui scegliere a mano (come Playnite): SteamGridDB, IGN, Steam, Wikipedia.
+async function ignCandidate(name) {
+  const r = await fetch(`https://www.ign.com/games/${slug(name)}`, { headers: { ...UA, Accept: 'text/html' }, signal: AbortSignal.timeout(15000) });
+  if (!r.ok) return [];
+  const html = await r.text();
+  const out = [];
+  const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+  if (og) out.push(og[1].replace(/&amp;/g, '&').split('?')[0]);
+  // altre copertine (edizioni, piattaforme) presenti nei dati della pagina
+  for (const m of html.matchAll(/https:\/\/assets-prd\.ignimgs\.com\/[^"'\s?\\]+?\.(?:jpg|jpeg|png|webp)/gi)) {
+    const u = m[0];
+    if (/boxart|box-art|cover|keyart|key-art/i.test(u) && !out.includes(u)) out.push(u);
+  }
+  return out.slice(0, 8).map((u) => ({ source: 'IGN', url: `${u}?width=600`, thumb: `${u}?width=240` }));
+}
+async function sgdbCandidates(name, key) {
+  const auth = { Authorization: `Bearer ${key}` };
+  const s = await getJson(`https://www.steamgriddb.com/api/v2/search/autocomplete/${encodeURIComponent(name)}`, auth);
+  const games = (s.data || []).slice(0, 3);
+  const out = [];
+  for (const game of games) {
+    const g = await getJson(`https://www.steamgriddb.com/api/v2/grids/game/${game.id}?dimensions=600x900,342x482,660x930&types=static,animated&nsfw=false&limit=30`, auth).catch(() => ({ data: [] }));
+    for (const it of g.data || []) out.push({ source: 'SteamGridDB', url: it.url, thumb: it.thumb || it.url, note: games.length > 1 ? game.name : null, animated: /\.(webp|gif)$/i.test(it.url) && it.style === 'animated' });
+    if (out.length >= 60) break;
+  }
+  return out;
+}
+async function steamCandidates(name, appid) {
+  const ids = [];
+  if (appid) ids.push({ id: appid, name });
+  const r = await getJson(`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(name)}&l=italian&cc=IT`).catch(() => ({ items: [] }));
+  for (const it of (r.items || []).slice(0, 6)) if (!ids.some((x) => String(x.id) === String(it.id))) ids.push({ id: it.id, name: it.name });
+  return ids.map((x) => ({ source: 'Steam', url: `https://cdn.cloudflare.steamstatic.com/steam/apps/${x.id}/library_600x900_2x.jpg`, thumb: `https://cdn.cloudflare.steamstatic.com/steam/apps/${x.id}/library_600x900.jpg`, note: x.name }));
+}
+async function wikiCandidate(name) {
+  const titleCase = name.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+  for (const t of [...new Set([name, titleCase])].flatMap((n) => [`${n} (video game)`, n])) {
+    const d = await getJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.replace(/ /g, '_'))}`).catch(() => null);
+    if (!d || d.type === 'disambiguation' || !/video ?game/i.test(`${d.description} ${d.extract}`)) continue;
+    const src = (d.originalimage || d.thumbnail || {}).source;
+    if (src) return [{ source: 'Wikipedia', url: src, thumb: (d.thumbnail || d.originalimage).source }];
+  }
+  return [];
+}
+async function catalog(name, { appid, sgdbKey, log = () => {} } = {}) {
+  const safe = (label, p) => p.catch((e) => { log(`catalogo ${label}: ${e.message}`); return []; });
+  const parts = await Promise.all([
+    sgdbKey ? safe('SteamGridDB', sgdbCandidates(name, sgdbKey)) : Promise.resolve([]),
+    safe('IGN', ignCandidate(name)),
+    safe('Steam', steamCandidates(name, appid)),
+    safe('Wikipedia', wikiCandidate(name)),
+  ]);
+  return { items: parts.flat(), sgdb: !!sgdbKey };
+}
+
 class Covers {
   constructor(dir, log) {
     this.dir = dir; this.log = log;
@@ -108,6 +163,18 @@ class Covers {
     const old = this.meta[id];
     if (old && old.file && old.custom) { try { fs.unlinkSync(path.join(this.dir, old.file)); } catch (e) {} }
     this.meta[id] = { file, custom: true, at: Date.now() };
+    this.save();
+  }
+  // Copertina scelta dal catalogo: la scarico e la tengo come scelta tua.
+  async setFromUrl(id, url) {
+    const img = await getImage(url);
+    if (!img) throw new Error('Immagine non disponibile');
+    fs.mkdirSync(this.dir, { recursive: true });
+    const file = `custom-${safeName(id)}-${Date.now()}.${img.ext}`;
+    fs.writeFileSync(path.join(this.dir, file), img.buf);
+    const old = this.meta[id];
+    if (old && old.file && old.custom) { try { fs.unlinkSync(path.join(this.dir, old.file)); } catch (e) {} }
+    this.meta[id] = { file, custom: true, at: Date.now(), from: url };
     this.save();
   }
   clearCustom(id) {
@@ -158,4 +225,4 @@ class Covers {
   forgetMisses() { for (const [k, v] of Object.entries(this.meta)) if (!v.file) delete this.meta[k]; this.save(); }
 }
 
-module.exports = { Covers, norm, safeName, slug, fromIgn };
+module.exports = { Covers, norm, safeName, slug, fromIgn, catalog };

@@ -709,6 +709,9 @@ async function captureNew(dir) {
     await wait(page === 'phone' ? 9000 : 1600);
     fs.writeFileSync(path.join(dir, `${page}${tab ? '-' + tab : ''}.png`), (await win.webContents.capturePage()).toPNG());
   }
+  await win.webContents.executeJavaScript(`document.querySelector('nav button[data-page="games"]').click(); setTimeout(() => document.querySelector('#games-grid .game .edit').click(), 600);`);
+  await wait(2500);
+  fs.writeFileSync(path.join(dir, 'games-picker.png'), (await win.webContents.capturePage()).toPNG());
   quitting = true;
   app.quit();
 }

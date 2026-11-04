@@ -206,6 +206,7 @@ function renderGames() {
       <div class="gcover${BLACK_BG.has(g.id) ? ' black' : ''}" data-h="${hue(g.name)}">${g.cover ? `<img src="${esc(g.cover)}" alt="" loading="lazy"${g.icon ? ' class="icon"' : g.wide ? ' class="wide"' : ''}>` : `<span>${esc(initials(g.name))}</span>`}</div>
       <div class="game-info"><b title="${esc(g.name)}">${esc(g.name)}</b><small>${esc(g.source)}${played[g.id] ? ` · ${ago(played[g.id])}` : ''}</small></div>
       <button class="play" title="Gioca">${ICON.play}</button>
+      <button class="icon-btn edit" title="Cambia copertina"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/></svg></button>
       ${g.id.startsWith('custom:') ? `<button class="icon-btn rm" title="Togli dalla libreria">${ICON.x}</button>` : ''}
     </div>`).join('');
   styled($('#games-grid'));
@@ -231,7 +232,7 @@ $('#games-grid').addEventListener('contextmenu', (e) => {
   if (!card) return;
   e.preventDefault();
   const g = gameList.find((x) => x.id === card.dataset.id);
-  gameMenu.innerHTML = `<button data-m="set">Scegli copertina…</button>${g && g.customCover ? '<button data-m="clear">Copertina automatica</button>' : ''}`;
+  gameMenu.innerHTML = `<button data-m="catalog">Scegli dal catalogo…</button><button data-m="set">Usa un file dal PC…</button>${g && g.customCover ? '<button data-m="clear">Copertina automatica</button>' : ''}`;
   gameMenu.style.left = `${Math.min(e.clientX, innerWidth - 220)}px`;
   gameMenu.style.top = `${Math.min(e.clientY, innerHeight - 100)}px`;
   gameMenu.dataset.id = card.dataset.id;
@@ -242,9 +243,60 @@ gameMenu.addEventListener('click', async (e) => {
   if (!b) return;
   const id = gameMenu.dataset.id;
   hideGameMenu();
+  if (b.dataset.m === 'catalog') return openPicker(id);
   if (b.dataset.m === 'set') { const r = await act(null, () => api.gamesSetCover(id)); if (r && r.changed) { await loadGames(false); toast('Copertina aggiornata'); } }
   if (b.dataset.m === 'clear') { await api.gamesClearCover(id); await loadGames(false); }
 });
+// Catalogo copertine (come Playnite): SteamGridDB, IGN, Steam e Wikipedia, si sceglie con un clic.
+let pk = { id: null, items: [], src: 'all' };
+const pkSrc = chips($('#pk-src'), (v) => { pk.src = v; drawPicker(); });
+function drawPicker() {
+  const list = pk.items.filter((x) => pk.src === 'all' || x.source === pk.src);
+  const counts = pk.items.reduce((a, x) => ({ ...a, [x.source]: (a[x.source] || 0) + 1 }), {});
+  $$('#pk-src button').forEach((b) => { const n = b.dataset.v === 'all' ? pk.items.length : counts[b.dataset.v] || 0; b.textContent = `${b.dataset.v === 'all' ? 'Tutte' : b.dataset.v} ${n}`; b.disabled = !n && b.dataset.v !== 'all'; });
+  $('#pk-grid').innerHTML = list.length ? list.map((x, i) => `<button class="pk-item" data-i="${pk.items.indexOf(x)}" title="${esc(x.source)}${x.note ? ' · ' + esc(x.note) : ''}"><img src="${esc(x.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span>${esc(x.source)}${x.animated ? ' · animata' : ''}</span></button>`).join('')
+    : '<p class="muted">Nessuna immagine trovata con questo nome. Prova a cercare con un altro nome qui sopra.</p>';
+  $$('#pk-grid img').forEach((img) => { img.onerror = () => img.closest('.pk-item').remove(); });
+}
+async function loadPicker(query) {
+  $('#pk-grid').innerHTML = '<div class="pk-loading"><i></i><i></i><i></i></div>';
+  $('#pk-hint').textContent = '';
+  const r = await api.gamesCatalog({ id: pk.id, query: query || null });
+  if (!r || r.ok === false) { $('#pk-grid').innerHTML = `<p class="muted">${esc((r && r.error) || 'Errore')}</p>`; return; }
+  pk.items = r.items || [];
+  $('#pk-query').value = r.name;
+  $('#pk-hint').innerHTML = r.sgdb ? '' : 'Per avere anche le decine di copertine di <b>SteamGridDB</b> aggiungi la chiave gratuita da Giochi → Copertine.';
+  drawPicker();
+}
+function openPicker(id) {
+  const g = gameList.find((x) => x.id === id);
+  if (!g) return;
+  pk = { id, items: [], src: 'all' };
+  pkSrc.set('all');
+  $('#pk-title').textContent = `Copertina di ${g.name}`;
+  $('#pk-sub').textContent = 'Clicca un\'immagine per usarla. Puoi tornare a quella automatica quando vuoi.';
+  $('#pk-auto').hidden = !g.customCover;
+  $('#picker').classList.add('show');
+  loadPicker();
+}
+const closePicker = () => $('#picker').classList.remove('show');
+$('#pk-close').onclick = closePicker;
+$('#picker').addEventListener('click', (e) => { if (e.target.id === 'picker') closePicker(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePicker(); });
+$('#pk-search').onclick = () => loadPicker($('#pk-query').value.trim());
+$('#pk-query').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadPicker($('#pk-query').value.trim()); });
+$('#pk-grid').addEventListener('click', async (e) => {
+  const b = e.target.closest('.pk-item');
+  if (!b) return;
+  const it = pk.items[+b.dataset.i];
+  b.classList.add('busy');
+  const r = await act(null, () => api.gamesPickCover({ id: pk.id, url: it.url }));
+  b.classList.remove('busy');
+  if (r && r.ok) { closePicker(); await loadGames(false); toast('Copertina aggiornata'); }
+});
+$('#pk-file').onclick = async () => { const r = await act(null, () => api.gamesSetCover(pk.id)); if (r && r.changed) { closePicker(); await loadGames(false); toast('Copertina aggiornata'); } };
+$('#pk-auto').onclick = async () => { await api.gamesClearCover(pk.id); closePicker(); await loadGames(false); };
+
 $('#games-covers').onclick = async () => {
   const ok = await confirmBox('Copertine dei giochi', 'Unico le scarica da Steam e Wikipedia. Per i giochi che non sono su Steam (Riot, Epic…) puoi aggiungere una chiave gratuita di SteamGridDB: crea un account su steamgriddb.com → Preferenze → API, copia la chiave e incollala qui.', {
     yes: 'Salva e cerca di nuovo',
@@ -263,6 +315,7 @@ $('#games-grid').addEventListener('click', async (e) => {
   if (!card) return;
   const id = card.dataset.id;
   if (e.target.closest('.rm')) { await api.gamesRemoveCustom(id); return loadGames(true); }
+  if (e.target.closest('.edit')) return openPicker(id);
   const g = gameList.find((x) => x.id === id);
   card.classList.add('launching');
   const r = await act(null, () => api.gamesLaunch(id), `Avvio ${g ? g.name : ''}…`);

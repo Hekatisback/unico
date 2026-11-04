@@ -118,4 +118,9 @@ function fakeGames() {
   ];
 }
 
-module.exports = { FakeSystem, fakeTools, fakeGames };
+function fakeCatalog(name) {
+  const c = (a, b, label, src) => ({ source: src, url: 'https://example.invalid/x.jpg', thumb: 'data:image/svg+xml;base64,' + Buffer.from(`<svg xmlns='http://www.w3.org/2000/svg' width='200' height='300'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${a}'/><stop offset='1' stop-color='${b}'/></linearGradient></defs><rect width='200' height='300' fill='url(#g)'/><text x='14' y='270' font-family='Arial' font-size='20' font-weight='700' fill='#fff'>${label}</text></svg>`).toString('base64') });
+  return [c('#ff4655', '#0f1923', name, 'SteamGridDB'), c('#2b2d42', '#ef233c', `${name} 2`, 'SteamGridDB'), c('#5f0f40', '#9a031e', 'Alt', 'SteamGridDB'), c('#003049', '#d62828', 'IGN', 'IGN'), c('#1b263b', '#415a77', 'Steam', 'Steam'), c('#264653', '#2a9d8f', 'Wiki', 'Wikipedia')];
+}
+
+module.exports = { FakeSystem, fakeTools, fakeGames, fakeCatalog };
