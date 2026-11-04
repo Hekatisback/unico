@@ -1,7 +1,7 @@
 {
   "name": "unico",
   "productName": "Unico",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "Un solo programma per mouse Razer Basilisk V3 X HyperSpeed, cuffie Corsair HS80 RGB Wireless e tastiera AULA F75 Max",
   "main": "src/main.js",
   "author": "Hekat",

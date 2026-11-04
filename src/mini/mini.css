@@ -2,8 +2,8 @@
 @media (prefers-color-scheme: light) { :root { --text: #15161c; --muted: rgba(21,22,28,.6); --card: rgba(255,255,255,.5); --line: rgba(0,0,0,.08); } }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { font: 13px/1.4 "Segoe UI Variable Text", "Segoe UI", sans-serif; color: var(--text); background: color-mix(in srgb, #101119 25%, transparent); user-select: none; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 0 12px 12px; }
-@media (prefers-color-scheme: light) { body { background: color-mix(in srgb, #e9ecf6 25%, transparent); } }
+body { font: 13px/1.4 "Segoe UI Variable Text", "Segoe UI", sans-serif; color: var(--text); background: linear-gradient(160deg, #1d1b2e, #121320); user-select: none; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 0 12px 12px; }
+@media (prefers-color-scheme: light) { body { background: linear-gradient(160deg, #f3f0ff, #e8f3fb); } }
 header { -webkit-app-region: drag; display: flex; align-items: center; gap: 4px; height: 40px; }
 header b { font-size: 13px; }
 .grow { flex: 1; }
