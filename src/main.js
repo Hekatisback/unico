@@ -15,7 +15,23 @@ const sysmod = require('./system');
 const { DEFAULT_PROFILES, DEFAULT_AUTO, applyProfile, detectGame } = require('./system/profiles');
 const MOCK = !!process.env.UNICO_MOCK;
 
-if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
+if (!app.requestSingleInstanceLock()) {
+  // Se a tenere il blocco è una vecchia copia portatile (un altro Unico.exe in un'altra cartella),
+  // la chiudo e riparto: così l'installer sostituisce davvero la versione zip.
+  if (process.platform === 'win32' && app.isPackaged && !process.argv.includes('--unico-retry') && closeOldCopies() > 0) {
+    app.relaunch({ args: [...process.argv.slice(1), '--unico-retry'] });
+  }
+  app.exit(0);
+  process.exit(0);
+}
+function closeOldCopies() {
+  try {
+    const mine = path.dirname(process.execPath).replace(/'/g, "''");
+    const ps = `$n = 0; Get-CimInstance Win32_Process -Filter "Name='Unico.exe'" | Where-Object { $_.ExecutablePath -and ([IO.Path]::GetDirectoryName($_.ExecutablePath) -ne '${mine}') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; $n++ }; Start-Sleep -Milliseconds 800; $n`;
+    const out = require('child_process').execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { windowsHide: true, timeout: 15000 });
+    return parseInt(String(out).trim(), 10) || 0;
+  } catch (e) { return 0; }
+}
 
 const userDir = app.getPath('userData');
 const logFile = path.join(userDir, 'unico.log');

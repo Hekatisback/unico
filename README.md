@@ -22,9 +22,9 @@ Da lì in poi Unico si aggiorna da solo: controlla ogni 6 ore, scarica in silenz
 
 ## Come esce una nuova versione
 
-1. Cambia `version` in `package.json`.
-2. Crea un tag con lo stesso numero e caricalo: `git tag v2.2.0 && git push --tags`.
-3. GitHub Actions (`.github/workflows/release.yml`) esegue i test, scarica scrcpy, costruisce l'installer su Windows e lo pubblica nelle Release.
+1. Cambia `version` in `package.json` e carica la modifica su `main`.
+2. GitHub Actions (`.github/workflows/release.yml`) parte da solo: esegue i test, scarica scrcpy, costruisce l'installer su Windows e lo pubblica nelle Release.
+3. Si può avviare anche a mano da Actions → Release → Run workflow.
 
 ## Sviluppo
 
