@@ -83,7 +83,7 @@ async function fromWikipedia(name) {
   return null;
 }
 
-// per questi teniamo il logo (su fondo nero nell'interfaccia) invece della copertina
+const MISS_V = 4;
 // cambiando le fonti si riprovano i giochi non trovati
 
 class Covers {
