@@ -306,7 +306,7 @@ $('#pk-file').onclick = async () => { const r = await act(null, () => api.gamesS
 $('#pk-auto').onclick = async () => { await api.gamesClearCover(pk.id); closePicker(); await loadGames(false); };
 
 $('#games-covers').onclick = async () => {
-  const ok = await confirmBox('Copertine dei giochi', 'Unico le scarica da Steam e Wikipedia. Per i giochi che non sono su Steam (Riot, Epic…) puoi aggiungere una chiave gratuita di SteamGridDB: crea un account su steamgriddb.com → Preferenze → API, copia la chiave e incollala qui.', {
+  const ok = await confirmBox('Copertine dei giochi', 'Unico le scarica da Steam, IGN e Wikipedia. Con una chiave gratuita di SteamGridDB hai molte più copertine tra cui scegliere: accedi su steamgriddb.com con Steam → Preferenze → API, copia la chiave e incollala qui.', {
     yes: 'Salva e cerca di nuovo',
     extra: `<input type="text" id="sgdb-key" placeholder="Chiave API SteamGridDB (facoltativa)" value="${esc(CFG.steamGridDbKey || '')}">`,
   });
