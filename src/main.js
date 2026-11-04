@@ -108,8 +108,13 @@ for (const k of Object.keys(DEFAULT_PROFILES)) if (!settings.profiles[k]) settin
 const mouse = new RazerMouse(HID, log);
 const headset = new Hs80(HID, log);
 const keyboard = new AulaKeyboard(HID, log);
+function phoneBinDir() {
+  const bundled = app.isPackaged ? path.join(process.resourcesPath, 'scrcpy') : path.join(__dirname, '..', 'vendor', 'scrcpy');
+  if (MOCK || !app.isPackaged) return bundled;
+  return require('./phone/runtime').prepare({ bundled, userDir, log, onReady: (dir) => { phone.binDir = dir; } });
+}
 const phone = new (process.env.UNICO_MOCK ? FakePhone : Phone)({
-  binDir: app.isPackaged ? path.join(process.resourcesPath, 'scrcpy') : path.join(__dirname, '..', 'vendor', 'scrcpy'),
+  binDir: phoneBinDir(),
   videosDir: app.getPath('videos'),
   log,
   onChange: (e) => { if (win && !win.isDestroyed()) win.webContents.send('phone', e); },
