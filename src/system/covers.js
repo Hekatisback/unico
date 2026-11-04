@@ -83,7 +83,7 @@ async function fromWikipedia(name) {
   return null;
 }
 
-const MISS_V = 3;
+const MISS_V = 4;
 // per questi teniamo il logo (su fondo nero nell'interfaccia) invece della copertina
 const KEEP_LOGO = new Set(['riot:league_of_legends', 'riot:valorant']); // cambiando le fonti si riprovano i giochi non trovati
 
@@ -127,7 +127,7 @@ class Covers {
         // si riprova: chi non ha copertina (dopo 7 giorni o con fonti nuove) e quelle prese da Wikipedia
         // quando arrivano fonti migliori (IGN, SteamGridDB)
         const better = m && m.file && !m.custom && m.src !== 'steam' && m.src !== 'steamgriddb' && (m.srcV !== MISS_V || (sgdbKey && m.src !== 'steamgriddb' && !m.sgdbTried));
-        if (m && m.file && (!better || KEEP_LOGO.has(g.id))) continue;
+        if (m && m.file && !better) continue;
         if (m && !m.file && m.missV === MISS_V && Date.now() - (m.missAt || 0) < 7 * 86400000) continue;
         if (better && sgdbKey) m.sgdbTried = true;
         let img = null;
