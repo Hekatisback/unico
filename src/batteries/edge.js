@@ -17,5 +17,4 @@ api.batteriesGet().then(render);
 api.on('batteries', render);
 api.on('batteries:hide', () => pill.classList.remove('show'));
 // il mouse sopra gli anelli: si fanno quasi trasparenti per non coprire quello che c'è sotto
-document.addEventListener('mouseenter', () => pill.classList.add('away'));
-document.addEventListener('mouseleave', () => pill.classList.remove('away'));
+api.on('batteries:away', (on) => pill.classList.toggle('away', !!on));

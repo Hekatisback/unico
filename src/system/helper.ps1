@@ -329,12 +329,35 @@ function Get-BtBattery {
 }
 
 # ---------------------------------------------------------------- schermo intero
-# SHQueryUserNotificationState: 2 = app a schermo intero, 3 = gioco Direct3D, 4 = presentazione
+# Schermo intero vero: la finestra in primo piano copre tutto il suo monitor (e non è il desktop),
+# oppure Windows segnala un gioco Direct3D esclusivo (3) o la modalità presentazione (4).
+# Lo stato 2 di SHQueryUserNotificationState da solo non basta: scatta anche con finestre trasparenti in primo piano.
 $qunsSrc = @"
+using System;
 using System.Runtime.InteropServices;
+using System.Text;
 namespace Unico { public static class Quns {
   [DllImport("shell32.dll")] static extern int SHQueryUserNotificationState(out int s);
-  public static int Get() { int s; return SHQueryUserNotificationState(out s) == 0 ? s : 0; }
+  [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr h, uint f);
+  [DllImport("user32.dll")] static extern bool GetMonitorInfo(IntPtr m, ref MONITORINFO mi);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
+  [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
+  public static int Get() {
+    int s; if (SHQueryUserNotificationState(out s) == 0 && (s == 3 || s == 4)) return 1;
+    IntPtr h = GetForegroundWindow();
+    if (h == IntPtr.Zero || !IsWindowVisible(h)) return 0;
+    var c = new StringBuilder(64); GetClassName(h, c, 64);
+    string cls = c.ToString();
+    if (cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd") return 0;
+    RECT r; if (!GetWindowRect(h, out r)) return 0;
+    var mi = new MONITORINFO(); mi.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+    if (!GetMonitorInfo(MonitorFromWindow(h, 2), ref mi)) return 0;
+    return (r.L <= mi.rcMonitor.L && r.T <= mi.rcMonitor.T && r.R >= mi.rcMonitor.R && r.B >= mi.rcMonitor.B) ? 1 : 0;
+  }
 } }
 "@
 function Get-Fullscreen {

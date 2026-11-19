@@ -14,6 +14,7 @@
   for (const [id, k] of Object.entries(map)) $(id).addEventListener('change', () => save({ [k]: $(id).value }));
   for (const [id, k] of Object.entries(checks)) $(id).addEventListener('change', () => save({ [k]: $(id).checked }));
   $('#bat-test').onclick = () => api.batteriesTestEdge();
+  $('#bat-panel').onclick = () => api.batteriesPanel();
   const p = await api.batteriesGet();
   fill(p.settings);
 })();

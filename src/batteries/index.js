@@ -227,9 +227,19 @@ function setup(ctx) {
   setInterval(async () => {
     if (B().edge === 'off' || MOCK || !sys.fullscreen) return;
     if (B().edge !== 'always' && Date.now() >= edgeUntil) return;
-    try { const q = await sys.fullscreen(); fullscreen = q === 2 || q === 3 || q === 4; } catch (e) {}
+    try { const f = (await sys.fullscreen()) === 1; if (f !== fullscreen) log(`batterie: schermo intero ${f ? 'sì' : 'no'}`); fullscreen = f; } catch (e) {}
     syncEdge();
   }, 2500);
+
+  // Mouse sopra gli anelli: diventano quasi trasparenti. Si controlla la posizione del cursore,
+  // perché con i clic che passano attraverso la finestra non riceve gli eventi del mouse.
+  let away = false;
+  setInterval(() => {
+    if (!edge || edge.isDestroyed()) { away = false; return; }
+    const c = screen.getCursorScreenPoint(), b = edge.getBounds();
+    const inside = c.x >= b.x - 6 && c.x <= b.x + b.width + 6 && c.y >= b.y - 6 && c.y <= b.y + b.height + 6;
+    if (inside !== away) { away = inside; edge.webContents.send('batteries:away', away); }
+  }, 200);
 
   // ---------------------------------------------------------------- comunicazione con le finestre
   function payload() {
@@ -254,6 +264,7 @@ function setup(ctx) {
     syncEdge();
     return { ok: true, settings: B() };
   });
+  handle('batteries:panel', async () => { setTimeout(togglePanel, 150); return { ok: true }; });
   handle('batteries:testEdge', async () => { flashEdge('connect', list.slice(0, 1).map((e) => e.id)); return { ok: true }; });
 
   // ---------------------------------------------------------------- avvio
