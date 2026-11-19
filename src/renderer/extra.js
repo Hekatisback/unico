@@ -203,9 +203,16 @@ async function loadStartup() {
   const box = $('#startup-list');
   if (!Array.isArray(list) || !list.length) { box.innerHTML = '<p class="muted">Nessuna app all\'avvio trovata.</p>'; return; }
   box.innerHTML = list.map((it, i) => `<div class="startup-item"><div class="si"><b>${esc(it.name)}</b><small>${esc(it.command)}</small></div><span class="chip">${it.scope}</span>
-    <label class="switch" title="${it.editable ? '' : 'Serve l\'amministratore'}"><input type="checkbox" data-st="${i}" ${it.enabled ? 'checked' : ''} ${it.editable ? '' : 'disabled'}><span></span></label></div>`).join('');
+    <label class="switch" title="${it.editable ? '' : 'Si cambia da Impostazioni di Windows → App → Avvio'}"><input type="checkbox" data-st="${i}" ${it.enabled ? 'checked' : ''}><span></span></label></div>`).join('');
   $$('[data-st]', box).forEach((c) => c.onchange = async () => {
     const it = list[+c.dataset.st];
+    // voci "tutti gli utenti": senza amministratore le cambia solo Windows, quindi si apre la sua pagina
+    if (!it.editable) {
+      c.checked = !c.checked;
+      toast(`${it.name} vale per tutti gli utenti: cambialo dalla pagina di Windows che ti apro, poi torna qui`);
+      api.sysStartupSettings();
+      return;
+    }
     const r = await act(null, () => api.sysStartupSet({ item: it, enabled: c.checked }), `${it.name}: ${c.checked ? 'parte con Windows' : 'non parte più all\'avvio'}`);
     if (!r || r.ok === false) c.checked = !c.checked;
   });

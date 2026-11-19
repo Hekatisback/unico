@@ -637,3 +637,4 @@ input[type=range]::-webkit-slider-runnable-track { background: linear-gradient(9
 .screen-frame { box-shadow: 0 0 0 1px var(--line-strong); }
 .modal .modal-card, .modal .picker-card { background: var(--base); box-shadow: 0 0 0 1px var(--line-strong), 0 24px 60px -24px rgba(0, 0, 0, .6); }
 .switch span::after { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+.rm-code { font: 700 22px/1 "Segoe UI Variable Display", "Segoe UI", sans-serif; letter-spacing: .08em; font-variant-numeric: tabular-nums; }

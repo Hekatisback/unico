@@ -4,6 +4,8 @@
 const { BrowserWindow, Notification, nativeImage, screen, shell, nativeTheme } = require('electron');
 const path = require('path');
 const M = require('./model');
+const H = require('./history');
+const fs = require('fs');
 
 const DEFAULTS = { trayClick: 'panel', edge: 'auto', edgeSide: 'right', edgePos: 'center', notice: 'edge', sound: false, bluetooth: true, phone: true };
 
@@ -14,6 +16,13 @@ function setup(ctx) {
   const save = (patch) => { S().batteries = { ...B(), ...patch }; ctx.saveSettings(); };
 
   let list = [];
+  // storico per stima e grafico, in un file a parte (non nelle impostazioni)
+  const histFile = path.join(app.getPath('userData'), 'battery-history.json');
+  let hist = {};
+  try { hist = JSON.parse(fs.readFileSync(histFile, 'utf8')) || {}; } catch (e) { hist = {}; }
+  let histDirty = false;
+  setInterval(() => { if (!histDirty) return; histDirty = false; try { fs.writeFileSync(histFile, JSON.stringify(hist)); } catch (e) { log(`storico batterie: ${e.message}`); } }, 60 * 1000);
+  app.on('will-quit', () => { if (histDirty) try { fs.writeFileSync(histFile, JSON.stringify(hist)); } catch (e) {} });
   let extra = { phones: [], bluetooth: [] };
   let seen = null; // id visti all'ultimo giro (null = primo giro: niente avvisi di collegamento)
   const warned = {};
@@ -83,6 +92,11 @@ function setup(ctx) {
   // ---------------------------------------------------------------- aggiornamento della lista
   function update() {
     list = M.buildList(ctx.getState(), extra);
+    for (const e of list) {
+      if (H.record(hist, e)) histDirty = true;
+      const est = H.estimate(hist[e.id]);
+      if (est && !e.stale && e.percent != null) { e.left = H.formatHours(est.hours); e.perHour = Math.round(est.perHour * 10) / 10; }
+    }
     const low = S().notifyBelow;
     // avviso di batteria bassa (le periferiche li gestisce già main.js: qui solo telefono e Bluetooth)
     const alerts = M.lowAlerts(list, warned, low);
@@ -148,7 +162,7 @@ function setup(ctx) {
   // ---------------------------------------------------------------- pannello dall'icona
   let panel = null, panelHiddenAt = 0;
   const dark = () => nativeTheme.shouldUseDarkColors;
-  function panelSize() { return { width: 330, height: Math.min(600, 112 + Math.max(1, list.length) * 64) }; }
+  function panelSize() { return { width: 330, height: Math.min(640, 112 + Math.max(1, list.length) * 64 + (list.length ? 110 : 0)) }; } // spazio per il grafico
   function togglePanel() {
     if (panel && !panel.isDestroyed() && panel.isVisible()) { panel.hide(); return; }
     if (Date.now() - panelHiddenAt < 300) return; // il clic che ha appena chiuso il pannello
@@ -247,7 +261,11 @@ function setup(ctx) {
 
   // ---------------------------------------------------------------- comunicazione con le finestre
   function payload() {
-    return { list, low: S().notifyBelow, now: Date.now(), settings: B(), reason: edgeReason, highlight: edgeHighlight, side: B().edgeSide };
+    // ultime 48 ore di ogni dispositivo, per il grafico nel pannello
+    const since = Date.now() - 48 * 3600e3;
+    const history = {};
+    for (const e of list) history[e.id] = (hist[e.id] || []).filter((x) => x.t >= since);
+    return { list, history, low: S().notifyBelow, now: Date.now(), settings: B(), reason: edgeReason, highlight: edgeHighlight, side: B().edgeSide };
   }
   function send(w) { if (w && !w.isDestroyed()) w.webContents.send('batteries', payload()); }
   function sendAll() {

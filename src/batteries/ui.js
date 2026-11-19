@@ -50,10 +50,24 @@
     if (e.status === 'off') bits.push('Spente');
     if (e.stale && e.at) bits.push(`letto ${ago(now - e.at)}`);
     if (e.old) bits.push(`ultima lettura ${e.old.percent}%, ${ago(now - e.old.at)}`);
+    if (e.left && !e.charging) bits.push(`${e.left} rimaste`);
     if (!bits.length) bits.push(e.kind === 'phone' ? 'Telefono' : e.id.startsWith('bt:') ? 'Bluetooth' : 'Collegato');
     return bits.join(' · ');
   }
+  // Grafico delle ultime 48 ore: linea della carica, tratti in carica evidenziati.
+  function chart(points, now, w = 280, h = 70) {
+    if (!points || points.length < 2) return '<div class="chart-empty">Ancora pochi dati: il grafico si riempie con l\'uso.</div>';
+    const t0 = now - 48 * 3600e3;
+    const X = (t) => ((t - t0) / (now - t0)) * w;
+    const Y = (p) => h - 4 - (p / 100) * (h - 8);
+    const line = points.map((x, i) => `${i ? 'L' : 'M'}${X(x.t).toFixed(1)} ${Y(x.p).toFixed(1)}`).join(' ');
+    const area = `${line} L${X(points[points.length - 1].t).toFixed(1)} ${h} L${X(points[0].t).toFixed(1)} ${h} Z`;
+    const charge = points.filter((x) => x.c).map((x) => `<circle cx="${X(x.t).toFixed(1)}" cy="${Y(x.p).toFixed(1)}" r="2.2" class="c"/>`).join('');
+    return `<svg class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" width="100%" height="${h}">
+      <line x1="0" x2="${w}" y1="${Y(50)}" y2="${Y(50)}" class="grid"/><path d="${area}" class="area"/><path d="${line}" class="line"/>${charge}
+    </svg><div class="chart-axis"><span>48 h fa</span><span>24 h fa</span><span>adesso</span></div>`;
+  }
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  window.BatUI = { icon, ring, label, detail, level, esc, COLORS };
+  window.BatUI = { icon, ring, label, detail, level, esc, chart, COLORS };
 })();

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14141b">
+<title>Unico</title>
+<style>
+  :root { color-scheme: dark; --bg: #14141b; --card: #1d1d26; --line: rgba(255,255,255,.08); --text: #f2f3f8; --muted: rgba(242,243,248,.6); --accent: #7f68ff; --ok: #19b867; --warn: #e69500; --bad: #e5304a; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: max(16px, env(safe-area-inset-top)) 16px 24px; }
+  h1 { font-size: 22px; margin: 4px 0 14px; font-weight: 650; display: flex; align-items: center; gap: 10px; }
+  h1 i { width: 26px; height: 26px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; font-style: normal; font-size: 14px; font-weight: 800; }
+  h1 small { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 400; }
+  section { background: var(--card); border-radius: 18px; padding: 14px; margin-bottom: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+  h2 { font-size: 13px; color: var(--muted); font-weight: 500; margin: 0 0 10px; }
+  button { font: inherit; color: var(--text); background: rgba(255,255,255,.06); border: 0; border-radius: 12px; padding: 12px; box-shadow: inset 0 0 0 1px var(--line); }
+  button:active { transform: scale(.97); }
+  button.on, button.primary { background: var(--accent); box-shadow: none; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .grow { flex: 1; }
+  .bats { display: grid; gap: 8px; }
+  .bat { display: flex; align-items: center; gap: 10px; }
+  .bat b { font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
+  .bar { flex: 1; height: 6px; border-radius: 6px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .bar u { display: block; height: 100%; background: var(--ok); }
+  .bat span { width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bat small { color: var(--muted); font-size: 12px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 32px; }
+  .media b, .media small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .media small { color: var(--muted); font-size: 13px; }
+  .media .ctl { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; margin-top: 10px; }
+  .media .ctl button { font-size: 20px; padding: 14px; }
+  .profiles { display: flex; flex-wrap: wrap; gap: 8px; }
+  .profiles button { padding: 10px 16px; border-radius: 999px; }
+  #pair input { font-size: 28px; letter-spacing: .3em; text-align: center; width: 100%; padding: 12px; border-radius: 12px; border: 0; background: rgba(255,255,255,.06); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+  #pair p { color: var(--muted); }
+  .err { color: #ff8796; min-height: 1.4em; font-size: 13px; }
+  .hide { display: none !important; }
+</style>
+</head>
+<body>
+  <h1><i>U</i>Unico <small id="upd"></small></h1>
+
+  <section id="pair" class="hide">
+    <h2>Abbina questo telefono</h2>
+    <p>Sul PC apri Unico → Opzioni → Controllo dal telefono e premi <b>Abbina un telefono</b>. Scrivi qui il codice che compare.</p>
+    <input id="pin" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+    <p class="err" id="perr"></p>
+    <button class="primary" id="pgo" style="width:100%">Abbina</button>
+  </section>
+
+  <div id="main" class="hide">
+    <section>
+      <h2>Volume del PC</h2>
+      <div class="row"><input type="range" min="0" max="100" id="vol" class="grow"><b id="volp" style="min-width:44px;text-align:right">—</b></div>
+      <div class="row"><span class="grow" id="dev" style="color:var(--muted);font-size:13px"></span><button id="mute">Muto</button></div>
+    </section>
+    <section class="media">
+      <h2>In riproduzione</h2>
+      <b id="mt">—</b><small id="ma"></small>
+      <div class="ctl"><button data-k="prev">⏮</button><button data-k="playpause" id="mp">⏯</button><button data-k="next">⏭</button></div>
+    </section>
+    <section>
+      <h2>Batterie</h2>
+      <div class="bats" id="bats"></div>
+    </section>
+    <section>
+      <h2>Profilo</h2>
+      <div class="profiles" id="profiles"></div>
+    </section>
+    <section>
+      <button id="lock" style="width:100%">🔒 Blocca il PC</button>
+    </section>
+  </div>
+
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const api = async (url, body) => {
+  const r = await fetch(url, { method: body ? 'POST' : 'GET', headers: { 'X-Unico': '1', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.error || r.status); e.status = r.status; throw e; }
+  return j;
+};
+const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const color = (p) => (p > 40 ? 'var(--ok)' : p > 15 ? 'var(--warn)' : 'var(--bad)');
+let dragging = false, timer = null;
+
+function show(paired) { $('#pair').classList.toggle('hide', paired); $('#main').classList.toggle('hide', !paired); }
+
+function render(s) {
+  show(true);
+  if (!dragging && s.volume) { $('#vol').value = s.volume.value; }
+  $('#volp').textContent = s.volume ? `${s.volume.value}%` : '—';
+  $('#dev').textContent = s.volume ? s.volume.name : '';
+  $('#mute').textContent = s.volume && s.volume.muted ? 'Riattiva' : 'Muto';
+  $('#mute').classList.toggle('on', !!(s.volume && s.volume.muted));
+  $('#mt').textContent = s.media && s.media.title ? s.media.title : 'Niente in riproduzione';
+  $('#ma').textContent = s.media && s.media.artist ? s.media.artist : '';
+  $('#mp').textContent = s.media && s.media.playing ? '⏸' : '▶';
+  $('#bats').innerHTML = (s.batteries || []).map((e) => `<div class="bat"><span>${esc(e.name)}</span><div class="bar"><u style="width:${e.percent || 0}%;background:${color(e.percent)}"></u></div><b>${e.percent == null ? '<small>nessun dato</small>' : e.percent + '%'}</b></div>`).join('') || '<small style="color:var(--muted)">Nessun dispositivo collegato</small>';
+  $('#profiles').innerHTML = (s.profiles || []).map((p) => `<button data-p="${esc(p.id)}" class="${p.active ? 'on' : ''}">${esc(p.name)}</button>`).join('');
+  $('#upd').textContent = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function refresh() {
+  try { render(await api('/api/state')); }
+  catch (e) { if (e.status === 401) show(false); }
+}
+async function act(body) { try { await api('/api/action', body); } catch (e) { if (e.status === 401) show(false); } setTimeout(refresh, 250); }
+
+$('#pgo').onclick = async () => {
+  $('#perr').textContent = '';
+  try { await api('/api/pair', { pin: $('#pin').value.trim(), name: navigator.userAgent.match(/\(([^;)]+;[^;)]+)/) ? navigator.userAgent.match(/\(([^;)]+;[^;)]+)/)[1] : 'Telefono' }); refresh(); }
+  catch (e) { $('#perr').textContent = e.message; }
+};
+$('#pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#pgo').click(); });
+$('#vol').addEventListener('input', () => { dragging = true; $('#volp').textContent = `${$('#vol').value}%`; clearTimeout(timer); timer = setTimeout(() => { act({ type: 'volume', value: +$('#vol').value }); dragging = false; }, 150); });
+$('#mute').onclick = () => act({ type: 'mute' });
+document.querySelectorAll('.ctl button').forEach((b) => b.onclick = () => act({ type: 'media', key: b.dataset.k }));
+$('#profiles').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (b) act({ type: 'profile', id: b.dataset.p }); });
+$('#lock').onclick = () => { if (confirm('Bloccare il PC?')) act({ type: 'lock' }); };
+refresh();
+setInterval(() => { if (!document.hidden) refresh(); }, 3000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+</script>
+</body>
+</html>

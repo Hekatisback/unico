@@ -63,6 +63,8 @@ const DEFAULTS = {
   syncLights: { effect: 'static', color: '#7c5cff' },
   lightsAuto: { idle: false, idleMin: 10, night: false, from: '23:00', to: '07:00' },
   osd: { enabled: true },
+  sidetone: { enabled: false, volume: 40 },
+  remote: { enabled: false, tokens: [] },
   wallpaperPause: true,
   favGames: [],
   mini: { top: true },
@@ -312,6 +314,7 @@ function push() {
   if (mini && !mini.isDestroyed()) mini.webContents.send('state', state);
   if (feat2.batteries) feat2.batteries.update(); else updateTray();
   if (!MOCK) onHeadsetMaybeOn();
+  syncSidetone();
 }
 
 async function refresh(which = ['mouse', 'headset', 'keyboard']) {
@@ -533,6 +536,11 @@ async function eqWrite(gains, enabled) {
   return apo.apply(gains, enabled, enabled ? await hs80OutputGuid() : null);
 }
 
+// Comandi dalle finestre (definito qui: le sezioni sotto li registrano subito)
+const handle = (name, fn) => ipcMain.handle(name, async (_e, arg) => {
+  try { return await fn(arg); } catch (e) { log(`${name}: ${e.stack || e.message}`); return { ok: false, error: e.message }; }
+});
+
 // --- Audio e microfono delle cuffie (senza iCUE) --------------------------------
 const audioCheck = require('./system/audiocheck');
 const ICUE_PATHS = ['Corsair iCUE5 Software', 'Corsair iCUE4 Software', 'CORSAIR iCUE 4 Software', 'CORSAIR iCUE Software'].map((d) => path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Corsair', d, 'iCUE.exe'));
@@ -578,6 +586,66 @@ async function onHeadsetMaybeOn() {
   headsetWasOn = on;
 }
 
+// --- Sidetone software: la propria voce nelle cuffie -----------------------------
+let sidetoneWin = null, sidetoneState = { on: false };
+function syncSidetone() {
+  const cfg = settings.sidetone || {};
+  const hs = state.headset || {};
+  const want = !!cfg.enabled && !MOCK && hs.connected && !hs.off && !hs.managed;
+  if (want && (!sidetoneWin || sidetoneWin.isDestroyed())) {
+    sidetoneWin = new BrowserWindow({ show: false, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, backgroundThrottling: false } });
+    sidetoneWin.loadFile(path.join(__dirname, 'sidetone', 'sidetone.html'));
+    sidetoneWin.webContents.once('did-finish-load', () => sidetoneWin && !sidetoneWin.isDestroyed() && sidetoneWin.webContents.send('sidetone', { volume: cfg.volume }));
+    sidetoneWin.on('closed', () => { sidetoneWin = null; });
+    log('sidetone: acceso');
+  } else if (!want && sidetoneWin) {
+    try { sidetoneWin.destroy(); } catch (e) {}
+    sidetoneWin = null;
+    sidetoneState = { on: false };
+    log('sidetone: spento');
+  } else if (want && sidetoneWin) sidetoneWin.webContents.send('sidetone', { volume: cfg.volume });
+}
+handle('sidetone:report', async (st) => { sidetoneState = { on: !!(st && st.ok), ...(st || {}) }; if (st && !st.ok) log(`sidetone: ${st.error}`); if (win && !win.isDestroyed()) win.webContents.send('sidetoneState', sidetoneState); return { ok: true }; });
+handle('sidetone:set', async (patch) => {
+  settings.sidetone = { ...settings.sidetone, ...(patch.enabled !== undefined ? { enabled: !!patch.enabled } : {}), ...(patch.volume !== undefined ? { volume: Math.max(0, Math.min(100, +patch.volume || 0)) } : {}) };
+  saveSettings();
+  syncSidetone();
+  return { ok: true, settings: settings.sidetone, state: sidetoneState };
+});
+handle('sidetone:get', async () => ({ settings: settings.sidetone, state: sidetoneState, headsetOn: !!(state.headset && state.headset.connected && !state.headset.off && !state.headset.managed) }));
+
+// --- Controllo dal telefono ---------------------------------------------------------
+async function defaultOutput() {
+  const list = await sys.audioDevices('render');
+  return (list || []).find((d) => d.isDefault) || null;
+}
+const remote = require('./remote/server').createRemote({
+  log, getSettings: () => settings, saveSettings,
+  onChange: (err) => { if (win && !win.isDestroyed()) win.webContents.send('remote', { ...remote.info(), error: err || null }); },
+  actions: {
+    state: async () => {
+      const [out, media] = await Promise.all([defaultOutput().catch(() => null), sys.media().catch(() => null)]);
+      const bats = feat2.batteries ? feat2.batteries.list() : [];
+      return {
+        volume: out ? { name: out.name.replace(/\s*\(.*\)$/, ''), value: out.volume, muted: !!out.muted } : null,
+        media: media ? { title: media.title, artist: media.artist, playing: !!media.playing } : null,
+        batteries: bats.map((e) => ({ name: e.name, percent: e.percent, charging: e.charging })),
+        profiles: Object.entries(settings.profiles).map(([id, p]) => ({ id, name: p.name, active: settings.activeProfile === id })),
+      };
+    },
+    volume: async (v) => { const o = await defaultOutput(); if (o) await sys.audioSetDeviceVolume(o.id, v); return { ok: !!o }; },
+    mute: async () => { const o = await defaultOutput(); if (o) await sys.audioSetDeviceMute(o.id, !o.muted); return { ok: !!o }; },
+    media: async (k) => { await sys.mediaKey(k); return { ok: true }; },
+    profile: async (id) => (settings.profiles[id] ? activateProfile(id) : { ok: false, error: 'profilo sconosciuto' }),
+    lock: async () => tools.lock(),
+  },
+});
+handle('remote:info', async () => remote.info());
+handle('remote:set', async ({ enabled }) => { settings.remote = { ...settings.remote, enabled: !!enabled }; saveSettings(); remote.sync(); await new Promise((r) => setTimeout(r, 300)); return remote.info(); });
+handle('remote:pin', async () => { if (!settings.remote.enabled) return { ok: false, error: 'Accendi prima il controllo dal telefono' }; return { ok: true, ...remote.newPin(), info: remote.info() }; });
+handle('remote:forget', async () => { remote.forgetAll(); return remote.info(); });
+handle('remote:open', async (url) => { if (/^http:\/\/[\d.]+:\d+$/.test(String(url))) shell.openExternal(url); return { ok: true }; });
+
 // iCUE aperto = le cuffie sono sue
 let icueOpen = null;
 async function checkIcue(names) {
@@ -590,9 +658,6 @@ async function checkIcue(names) {
 }
 
 // --- IPC ----------------------------------------------------------------------
-const handle = (name, fn) => ipcMain.handle(name, async (_e, arg) => {
-  try { return await fn(arg); } catch (e) { log(`${name}: ${e.stack || e.message}`); return { ok: false, error: e.message }; }
-});
 
 handle('state:get', async () => ({ state, settings, meta: { modes: MODES, sleep: SLEEP, eqBands: apo.BANDS, eqPresets: apo.PRESETS, version: app.getVersion(), micaSupported, platform: process.platform } }));
 handle('state:refresh', async (which) => refresh(which));
@@ -660,6 +725,7 @@ handle('sys:watch', async (on) => { sys.want('window', !!on); return { ok: true,
 handle('sys:procs', async () => sys.procs());
 handle('sys:kill', async ({ pids, name }) => sys.kill(pids, name));
 handle('sys:startup', async () => tools.startupList());
+handle('sys:startupSettings', async () => { shell.openExternal('ms-settings:startupapps'); return { ok: true }; });
 handle('sys:startupSet', async ({ item, enabled }) => tools.startupSet(item, enabled));
 handle('sys:cleanupScan', async () => sys.cleanupScan(app.getPath('downloads')));
 handle('sys:clearTemp', async () => sys.clearTemp());
@@ -792,7 +858,7 @@ const hex = (v) => (v || 0).toString(16).padStart(4, '0');
 // --- Avvio --------------------------------------------------------------------
 app.on('second-instance', showWindow);
 app.on('window-all-closed', (e) => e.preventDefault());
-app.on('will-quit', () => { phone.stopAll(); sys.stop(); try { globalShortcut.unregisterAll(); } catch (e) {} });
+app.on('will-quit', () => { remote.stop(); phone.stopAll(); sys.stop(); try { globalShortcut.unregisterAll(); } catch (e) {} });
 app.on('before-quit', async (e) => {
   if (headset.ledTimer) {
     e.preventDefault();
@@ -822,6 +888,7 @@ app.whenReady().then(async () => {
   setInterval(refreshBatteries, 60 * 1000);
   registerShortcut();
   if (settings.overlay.enabled) setOverlay(true);
+  remote.sync();
   setInterval(checkAlerts, 30 * 1000);
   setInterval(watchGames, 5000);
   // avvia PowerShell in anticipo: la prima apertura di Sistema e Audio è subito pronta
@@ -868,6 +935,27 @@ async function captureV28(dir) {
   await wait(3500);
   fs.writeFileSync(path.join(dir, 'audio-mic.png'), (await win.webContents.capturePage()).toPNG());
   fs.writeFileSync(path.join(dir, 'audiocheck.json'), JSON.stringify(await headsetAudioCheck(), null, 1));
+  // 2.11: controllo dal telefono e storico
+  settings.remote.enabled = true; remote.sync(); await wait(800);
+  const pinInfo = remote.newPin();
+  await win.webContents.executeJavaScript(`document.querySelector('nav button[data-page="settings"]').click(); document.querySelector('[data-tabs="settings"] button[data-tab="general"]').click(); setTimeout(() => { document.querySelector('#rm-card').scrollIntoView({ block: 'start' }); const c = document.querySelector('#rm-on'); c.checked = true; c.dispatchEvent(new Event('change')); }, 400);`);
+  await wait(2500);
+  fs.writeFileSync(path.join(dir, 'remote-settings.png'), (await win.webContents.capturePage()).toPNG());
+  const ph = new BrowserWindow({ width: 390, height: 844, show: false, webPreferences: { partition: 'phone-test' } });
+  await ph.webContents.session.setProxy({ mode: 'direct' });
+  try { await ph.loadURL('http://127.0.0.1:47810/'); } catch (e) { log(`prova telefono: ${e.message}`); }
+  await wait(800);
+  fs.writeFileSync(path.join(dir, 'phone-pair.png'), (await ph.webContents.capturePage()).toPNG());
+  await ph.webContents.executeJavaScript(`document.querySelector('#pin').value = '${pinInfo.code}'; document.querySelector('#pgo').click();`);
+  await wait(2000);
+  fs.writeFileSync(path.join(dir, 'phone-main.png'), (await ph.webContents.capturePage()).toPNG());
+  ph.destroy();
+  B.togglePanel(); await wait(300); B.togglePanel(); await wait(1200);
+  const pw = B.panelWin(); if (pw) { await pw.webContents.executeJavaScript(`document.querySelector('.row[data-id="headset"]') && document.querySelector('.row[data-id="headset"]').click()`); await wait(800); fs.writeFileSync(path.join(dir, 'panel-chart.png'), (await pw.webContents.capturePage()).toPNG()); }
+  await win.webContents.executeJavaScript(`document.querySelector('nav button[data-page="audio"]').click(); setTimeout(() => document.querySelector('[data-tabs="audio"] button[data-tab="mic"]').click(), 400);`);
+  await wait(2500);
+  await win.webContents.executeJavaScript(`document.querySelector('#st-card').scrollIntoView({ block: 'center' })`); await wait(500);
+  fs.writeFileSync(path.join(dir, 'sidetone.png'), (await win.webContents.capturePage()).toPNG());
   quitting = true;
   app.quit();
 }

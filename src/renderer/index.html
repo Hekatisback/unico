@@ -402,6 +402,12 @@
               <div class="row"><button class="btn ghost small" id="ha-check">Ricontrolla</button><button class="btn primary small" id="ha-fix">Sistema</button></div></div>
             <ul class="ha-list" id="ha-list"><li class="muted">Caricamento…</li></ul>
           </div>
+          <div class="card glass" id="st-card">
+            <div class="card-head"><div><h3>Senti la tua voce (sidetone)</h3><p class="muted">Come in iCUE: la tua voce torna nelle cuffie mentre parli, così non urli. È fatto da Windows, quindi c'è un ritardo piccolo (pochi centesimi di secondo).</p></div>
+              <label class="switch inline"><input type="checkbox" id="st-on"><span></span></label></div>
+            <div class="row"><span class="muted">Volume</span><input type="range" min="0" max="100" id="st-vol" class="grow"><b id="st-pct">40%</b></div>
+            <p class="muted" id="st-note"></p>
+          </div>
           <div class="two">
             <div class="card glass">
               <h3>Microfono in uso</h3>
@@ -571,6 +577,17 @@
               <label class="field">Avvisa con batteria sotto <select id="set-notify"><option value="10">10%</option><option value="15">15%</option><option value="20">20%</option><option value="25">25%</option></select></label>
             </div>
           </div>
+          <div class="card glass" id="rm-card">
+            <div class="card-head"><div><h3>Controllo dal telefono</h3><p class="muted">Dal telefono, nella stessa rete Wi-Fi: volume, musica, profili, batterie e blocco del PC. Solo i telefoni che abbini con un codice possono usarlo.</p></div>
+              <label class="switch inline"><input type="checkbox" id="rm-on"><span></span></label></div>
+            <div id="rm-body">
+              <p class="muted">Sul telefono apri: <b id="rm-addr">—</b></p>
+              <div class="row"><button class="btn primary small" id="rm-pin">Abbina un telefono</button><b id="rm-code" class="rm-code"></b><span class="muted" id="rm-left"></span></div>
+              <p class="muted" id="rm-devs"></p>
+              <div class="row"><button class="btn ghost small" id="rm-forget">Scollega tutti i telefoni</button></div>
+              <p class="muted">La prima volta Windows chiede se Unico può usare la rete: scegli <b>Reti private</b> e premi <b>Consenti</b>.</p>
+            </div>
+          </div>
           <div class="two">
             <div class="card glass">
               <h3>Batterie nella barra e sul bordo</h3>
@@ -674,5 +691,6 @@
   <script src="more2.js"></script>
   <script src="batteries.js"></script>
   <script src="headset-audio.js"></script>
+  <script src="remote.js"></script>
 </body>
 </html>

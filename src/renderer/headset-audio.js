@@ -21,8 +21,25 @@
     return r && r.ok !== false ? { ok: true } : r;
   }, 'Sistemato');
   $('#ha-list').addEventListener('click', (e) => { if (e.target.closest('[data-privacy]')) api.headsetAudioPrivacy(); });
+  // sidetone
+  async function stLoad() {
+    const r = await api.sidetoneGet().catch(() => null);
+    if (!r) return;
+    $('#st-on').checked = !!r.settings.enabled;
+    $('#st-vol').value = r.settings.volume; $('#st-pct').textContent = `${r.settings.volume}%`;
+    if (typeof paintRange === 'function') paintRange($('#st-vol'));
+    stNote(r.state, r.settings.enabled, r.headsetOn);
+  }
+  function stNote(st, on, headsetOn) {
+    $('#st-note').textContent = !on ? '' : headsetOn === false ? 'Si accende quando le cuffie sono accese e gestite da Unico (iCUE chiuso).'
+      : st && st.on ? `Attivo${st.latencyMs ? ` · ritardo circa ${st.latencyMs} ms` : ''}.` : st && st.error ? `Non partito: ${st.error}` : 'Avvio…';
+  }
+  $('#st-on').addEventListener('change', async () => { const r = await api.sidetoneSet({ enabled: $('#st-on').checked }); stNote(r.state, r.settings.enabled); setTimeout(stLoad, 1500); });
+  let stT = null;
+  $('#st-vol').addEventListener('input', () => { $('#st-pct').textContent = `${$('#st-vol').value}%`; clearTimeout(stT); stT = setTimeout(() => api.sidetoneSet({ volume: +$('#st-vol').value }), 120); });
+  api.on('sidetoneState', (st) => stNote(st, $('#st-on').checked));
   const prevPage = pageHooks.audio;
-  pageHooks.audio = (on, ...a) => { if (prevPage) prevPage(on, ...a); if (on) check(); };
+  pageHooks.audio = (on, ...a) => { if (prevPage) prevPage(on, ...a); if (on) { check(); stLoad(); } };
   const prev = tabHooks.audio;
   tabHooks.audio = (...a) => { if (prev) prev(...a); check(); };
   api.on('goto', (where) => {
