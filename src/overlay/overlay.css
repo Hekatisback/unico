@@ -11,3 +11,6 @@ body { font: 600 12.5px/1.35 "Segoe UI Variable Text", "Segoe UI", system-ui, sa
 .dim .k { width: auto; }
 .v.small { font-size: 11.5px; }
 .v.big { font-size: 15px; font-weight: 700; color: #7CFFB2; }
+
+/* 3.0: stile opaco */
+.osd, .ov, .panel, .card { background: rgba(24, 24, 32, .88) !important; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 10px 26px -12px rgba(0,0,0,.6) !important; }

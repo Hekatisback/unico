@@ -8,3 +8,6 @@ body { display: grid; place-items: center; }
 .osd b { display: block; font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
 .osd span { display: block; font-size: 12.5px; opacity: .7; margin-top: 2px; }
 .osd span:empty { display: none; }
+
+/* 3.0: stile opaco */
+.osd, .ov, .panel, .card { background: rgba(24, 24, 32, .88) !important; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 10px 26px -12px rgba(0,0,0,.6) !important; }

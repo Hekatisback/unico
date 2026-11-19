@@ -1,4 +1,4 @@
-/* Unico — "liquid glass" su Mica.
+/* Unico — superfici opache su Mica (fino alla 2.9 era "liquid glass": vedi in fondo lo stile 3.0).
    Il fondo della finestra è Mica (Windows 11): l'aurora dietro i pannelli dà al vetro qualcosa da rifrangere. */
 :root {
   color-scheme: light dark;
@@ -576,3 +576,64 @@ input[type=range]:disabled { opacity: .45; cursor: default; }
 .ha-list li.ok i { background: var(--ok); }
 .ha-list li.bad i { background: var(--bad); }
 [data-tabs] button.alert::after { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--bad); margin-left: 6px; vertical-align: middle; }
+
+/* =====================================================================================
+   3.0 — stile opaco. Meno lucido: niente riflessi, bordi iridescenti e gradienti brillanti.
+   Superfici piatte e semitrasparenti, un bordo sottile, ombre morbide, colore d'accento pieno.
+   ===================================================================================== */
+:root {
+  --glass: rgba(255, 255, 255, .66);
+  --glass-2: rgba(255, 255, 255, .66);
+  --line: rgba(20, 22, 40, .08);
+  --line-strong: rgba(20, 22, 40, .14);
+  --field: rgba(20, 22, 40, .045);
+  --field-line: rgba(20, 22, 40, .1);
+  --shadow: 0 1px 2px rgba(20, 22, 40, .05), 0 8px 24px -14px rgba(20, 22, 40, .25);
+  --accent: #6247f0;
+  --aurora-opacity: .32;
+  --r: 18px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass: rgba(28, 29, 38, .74);
+    --glass-2: rgba(28, 29, 38, .74);
+    --line: rgba(255, 255, 255, .07);
+    --line-strong: rgba(255, 255, 255, .13);
+    --field: rgba(255, 255, 255, .05);
+    --field-line: rgba(255, 255, 255, .09);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 28px -16px rgba(0, 0, 0, .7);
+    --accent: #7f68ff;
+    --aurora-opacity: .22;
+  }
+}
+.aurora { filter: blur(90px); }
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px) saturate(105%);
+  backdrop-filter: blur(18px) saturate(105%);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+}
+.glass::before, .glass::after { display: none; }
+.refract { backdrop-filter: blur(18px) saturate(105%); }
+
+/* pulsanti, interruttori e selezioni: accento pieno, senza riflesso */
+.logo, .btn.primary, .chips button.on, .switch input:checked + span, .btn.small.on-q, .act-btn.on, .game .play {
+  background: var(--accent);
+  box-shadow: none;
+}
+.btn.primary:hover { filter: brightness(1.08); }
+.chips button.on { transform: none; }
+.btn.ghost, .act-btn { box-shadow: inset 0 0 0 1px var(--field-line); }
+.device-ico, .chip { box-shadow: none; }
+.blob { background: var(--field); box-shadow: inset 0 0 0 1px var(--line-strong); }
+@media (prefers-color-scheme: dark) { .blob { background: rgba(255, 255, 255, .09); box-shadow: inset 0 0 0 1px var(--line-strong); } }
+input:not([type=range]):not([type=checkbox]):not([type=color]), select, textarea { box-shadow: inset 0 0 0 1px var(--field-line); }
+
+/* barre e grafici: un colore solo */
+.progress div, .bar div, .cores i { background: var(--accent); }
+.bar div.warn { background: var(--warn); }
+input[type=range]::-webkit-slider-runnable-track { background: linear-gradient(90deg, var(--accent) var(--fill, 50%), var(--field-line) 0); }
+.band input::-webkit-slider-runnable-track { background: linear-gradient(0deg, var(--accent) var(--fill, 50%), var(--field-line) 0); }
+.screen-frame { box-shadow: 0 0 0 1px var(--line-strong); }
+.modal .modal-card, .modal .picker-card { background: var(--base); box-shadow: 0 0 0 1px var(--line-strong), 0 24px 60px -24px rgba(0, 0, 0, .6); }
+.switch span::after { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
