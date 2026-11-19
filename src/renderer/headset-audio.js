@@ -42,6 +42,7 @@
   pageHooks.audio = (on, ...a) => { if (prevPage) prevPage(on, ...a); if (on) { check(); stLoad(); } };
   const prev = tabHooks.audio;
   tabHooks.audio = (...a) => { if (prev) prev(...a); check(); };
+  $('#hs-sidetone-go').onclick = () => { go('audio'); setTimeout(() => { const b = document.querySelector('[data-tabs="audio"] button[data-tab="mic"]'); if (b) b.click(); }, 200); };
   api.on('goto', (where) => {
     const [page, tab] = String(where).split(':');
     go(page);
