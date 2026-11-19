@@ -310,6 +310,38 @@ function Invoke-Suspend {
   return $true
 }
 
+# ---------------------------------------------------------------- batterie Bluetooth
+# Windows salva la batteria dei dispositivi Bluetooth nella proprietà DEVPKEY_Bluetooth_Battery:
+# si legge e basta, al dispositivo non viene mandato niente.
+function Get-BtBattery {
+  $out = New-Object System.Collections.ArrayList
+  $devs = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like 'BTH*' }
+  foreach ($d in $devs) {
+    try {
+      $b = (Get-PnpDeviceProperty -InstanceId $d.InstanceId -KeyName '{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2' -ErrorAction Stop).Data
+      if ($null -eq $b) { continue }
+      $c = $null
+      try { $c = (Get-PnpDeviceProperty -InstanceId $d.InstanceId -KeyName '{83DA6326-97A6-4088-9453-A1923F573B29} 15' -ErrorAction Stop).Data } catch {}
+      [void]$out.Add(@{ name = $d.FriendlyName; battery = [int]$b; cls = $d.Class; connected = $c })
+    } catch {}
+  }
+  return ,$out.ToArray()
+}
+
+# ---------------------------------------------------------------- schermo intero
+# SHQueryUserNotificationState: 2 = app a schermo intero, 3 = gioco Direct3D, 4 = presentazione
+$qunsSrc = @"
+using System.Runtime.InteropServices;
+namespace Unico { public static class Quns {
+  [DllImport("shell32.dll")] static extern int SHQueryUserNotificationState(out int s);
+  public static int Get() { int s; return SHQueryUserNotificationState(out s) == 0 ? s : 0; }
+} }
+"@
+function Get-Fullscreen {
+  if (-not $script:qunsReady) { Add-Type -TypeDefinition $qunsSrc -Language CSharp; $script:qunsReady = $true }
+  return [Unico.Quns]::Get()
+}
+
 # ---------------------------------------------------------------- ciclo principale
 while ($true) {
   $line = [Console]::In.ReadLine()
@@ -337,6 +369,8 @@ while ($true) {
       'brightness' { Get-Brightness }
       'setBrightness' { Set-Brightness $a.id $a.value }
       'suspend' { Invoke-Suspend }
+      'btBattery' { Get-BtBattery }
+      'fullscreen' { Get-Fullscreen }
       'audioDevices' { Get-AudioDevices $a.flow }
       'audioSessions' { Get-AudioSessions }
       'audioSetDefault' { Initialize-Audio; [UnicoAudio.Api]::SetDefault([string]$a.id, [bool]$a.comm); $true }

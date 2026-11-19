@@ -28,6 +28,8 @@ class FakeSystem {
     if (this.history.length > 120) this.history.shift();
     this.onTick(s);
   }
+  async btBattery() { return [{ name: 'Xbox Wireless Controller', battery: 34, cls: 'HIDClass', connected: true }]; }
+  async fullscreen() { return 0; }
   async procs() {
     const mk = (name, desc, cpu, memMb, n = 1, prot = false) => ({ name, desc, path: `C:\\Program Files\\${name}.exe`, pids: Array.from({ length: n }, (_, i) => 1000 + name.length * 37 + i), cpu, mem: memMb * 1048576, io: cpu * 1e4, protected: prot });
     return [

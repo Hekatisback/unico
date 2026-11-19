@@ -8,6 +8,7 @@ Un solo programma per Windows al posto di iCUE, Razer Synapse e del driver AULA,
 - **Cuffie** Corsair HS80 RGB Wireless: equalizzatore (Equalizer APO), luci, spegnimento automatico, microfono, batteria.
 - **Tastiera** AULA F75 Max: effetti luce, schermo (immagini e GIF), orologio, tasti e risparmio energetico.
 - **Telefono** (Android, con scrcpy): mirroring, file, foto, batteria, notifiche sul PC, scrivere sul telefono dal PC.
+- **Batterie** (idea presa da [Joule](https://github.com/DillanCidral/Joule)): un clic sull'icona nella barra mostra tutte le batterie (periferiche, telefono, dispositivi Bluetooth) dalla più scarica; anelli sul bordo dello schermo che spariscono a schermo intero; icona con il pallino rosso se qualcosa è scarico; avviso quando un dispositivo si accende. Mai un numero inventato: se manca scrive "Nessun dato".
 - **Audio**: dispositivo di uscita, volume per app con livelli in tempo reale, prova del microfono.
 - **Giochi**: libreria da Steam, Epic, Riot e Prism Launcher, avvio con il profilo Gioco, storico delle sessioni.
 - **Strumenti**: cronologia appunti, timer e promemoria, screenshot (`Ctrl+Alt+S`) e registrazione dello schermo (`Ctrl+Alt+R`).

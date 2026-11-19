@@ -70,6 +70,7 @@ const DEFAULTS = {
   autoProfile: DEFAULT_AUTO,
   activeProfile: null,
   notifyBelow: 15,
+  batteries: require('./batteries').DEFAULTS,
   eq: { enabled: false, preset: 'Piatto', gains: apo.PRESETS.Piatto },
   headset: {
     customLeds: false,
@@ -308,7 +309,7 @@ function push() {
   if (win && !win.isDestroyed()) win.webContents.send('state', state);
   const mini = feat2.miniWin && feat2.miniWin();
   if (mini && !mini.isDestroyed()) mini.webContents.send('state', state);
-  updateTray();
+  if (feat2.batteries) feat2.batteries.update(); else updateTray();
 }
 
 async function refresh(which = ['mouse', 'headset', 'keyboard']) {
@@ -424,8 +425,10 @@ function showWindow() {
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(iconPath()).resize({ width: 16, height: 16 }));
   updateTrayMenu();
-  tray.on('click', showWindow);
-  updateTray();
+  // come Joule: un clic apre il pannello delle batterie, il doppio clic apre Unico
+  tray.on('click', () => { if (feat2.batteries && feat2.batteries.trayClick() === 'panel') feat2.batteries.togglePanel(); else showWindow(); });
+  tray.on('double-click', showWindow);
+  if (feat2.batteries) feat2.batteries.update(); else updateTray();
 }
 // Menu dell'icona: giochi preferiti e recenti si avviano da qui senza aprire la finestra.
 function updateTrayMenu() {
@@ -434,6 +437,8 @@ function updateTrayMenu() {
   const profiles = Object.entries(settings.profiles).map(([id, p]) => ({ label: p.name, type: 'radio', checked: settings.activeProfile === id, click: () => activateProfile(id) }));
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Apri Unico', click: showWindow },
+    { label: 'Batterie', click: () => feat2.batteries && feat2.batteries.togglePanel() },
+    { label: 'Mostra gli anelli sul bordo', click: () => feat2.batteries && feat2.batteries.flashEdge('test') },
     { label: 'Finestra compatta', click: () => feat2.toggleMini && feat2.toggleMini() },
     { type: 'separator' },
     ...(games.length ? [{ label: 'Gioca', submenu: games.map((g) => ({ label: `${g.fav ? '★ ' : ''}${g.name}`, click: () => feat.launchGame(g.id) })) }] : []),
@@ -728,6 +733,7 @@ const feat2 = {
   getSettings: () => settings, saveSettings, getWin: () => win, getState: () => state, push,
   refresh: () => refresh(), headsetCtx: () => headsetCtx(), showWindow: () => showWindow(),
   material: () => material(), steamPath: () => require('./system/games').steamPathFromRegistry(),
+  getTray: () => tray, gameRunning: () => gameRunning, refreshBatteries: () => refreshBatteries(),
 };
 feat.updateTrayMenu = () => updateTrayMenu();
 
@@ -751,6 +757,7 @@ app.on('before-quit', async (e) => {
 app.whenReady().then(async () => {
   require('./features').setup(feat);
   require('./extras').setup(feat2);
+  require('./batteries').setup(feat2);
   app.setAppUserModelId('it.hekat.unico');
   log(`--- avvio Unico ${app.getVersion()} (electron ${process.versions.electron}, hidapi ${safe(() => HID.getHidapiVersion())})`);
   applyLoginItem();
@@ -774,6 +781,7 @@ app.whenReady().then(async () => {
   if (process.env.UNICO_SHOTS) captureScreens(process.env.UNICO_SHOTS);
   if (process.env.UNICO_SHOT3) captureNew(process.env.UNICO_SHOT3);
   if (process.env.UNICO_SHOT4) captureV26(process.env.UNICO_SHOT4);
+  if (process.env.UNICO_SHOT5) captureV28(process.env.UNICO_SHOT5);
 });
 
 // Solo sviluppo: overlay e lettore musicale.
@@ -787,6 +795,25 @@ async function captureDemo(dir) {
   await win.webContents.executeJavaScript(`document.querySelector('#view').scrollTop = 520`);
   await wait(3500);
   fs.writeFileSync(path.join(dir, 'home-media.png'), (await win.webContents.capturePage()).toPNG());
+  quitting = true;
+  app.quit();
+}
+
+// Solo sviluppo: batterie della 2.8 (pannello, anelli sul bordo, opzioni).
+async function captureV28(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const B = feat2.batteries;
+  win.show();
+  await wait(4000);
+  B.togglePanel(); await wait(2500);
+  const p = B.panelWin(); if (p) fs.writeFileSync(path.join(dir, 'panel.png'), (await p.webContents.capturePage()).toPNG());
+  B.flashEdge('connect', ['headset']); await wait(1800);
+  const e = B.edgeWin(); if (e) fs.writeFileSync(path.join(dir, 'edge.png'), (await e.webContents.capturePage()).toPNG());
+  await win.webContents.executeJavaScript(`document.querySelector('nav button[data-page="settings"]').click(); document.querySelector('[data-tabs="settings"] button[data-tab="general"]').click(); setTimeout(() => { document.querySelector('#bat-click').scrollIntoView({ block: 'center' }); }, 400);`);
+  await wait(1500);
+  fs.writeFileSync(path.join(dir, 'settings.png'), (await win.webContents.capturePage()).toPNG());
+  fs.writeFileSync(path.join(dir, 'list.json'), JSON.stringify(B.list(), null, 1));
   quitting = true;
   app.quit();
 }

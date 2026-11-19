@@ -290,6 +290,8 @@ class SystemService {
   brightness() { return this.helper.call('brightness', {}, 15000).then(arr); }
   setBrightness(id, value) { return this.helper.call('setBrightness', { id, value: Math.max(0, Math.min(100, Math.round(value))) }, 8000); }
   suspend() { return this.helper.call('suspend'); }
+  btBattery() { return this.helper.call('btBattery', {}, 30000).then(arr); }
+  fullscreen() { return this.helper.call('fullscreen', {}, 5000); }
   // audio
   audioDevices(flow) { return this.helper.call('audioDevices', { flow: flow === 'capture' ? 1 : 0 }, 15000).then(arr); }
   audioSessions() { return this.helper.call('audioSessions', {}, 15000).then(arr).then(groupSessions); }

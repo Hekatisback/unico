@@ -568,6 +568,24 @@
           </div>
           <div class="two">
             <div class="card glass">
+              <h3>Batterie nella barra e sul bordo</h3>
+              <label class="field">Clic sull'icona di Unico <select id="bat-click"><option value="panel">Mostra le batterie (doppio clic apre Unico)</option><option value="window">Apre Unico</option></select></label>
+              <label class="field">Anelli sul bordo dello schermo <select id="bat-edge"><option value="auto">Solo quando serve (accensione, batteria bassa)</option><option value="always">Sempre</option><option value="off">Mai</option></select></label>
+              <div class="row"><label class="field">Lato <select id="bat-side"><option value="right">Destra</option><option value="left">Sinistra</option></select></label><label class="field">Altezza <select id="bat-pos"><option value="top">In alto</option><option value="center">Al centro</option><option value="bottom">In basso</option></select></label></div>
+              <p class="muted">Gli anelli spariscono con giochi e app a schermo intero; se ci passi sopra col mouse diventano trasparenti.</p>
+              <div class="row"><button class="btn ghost small" id="bat-test">Mostra gli anelli</button></div>
+            </div>
+            <div class="card glass">
+              <h3>Quando un dispositivo si accende</h3>
+              <label class="field">Mostra la batteria <select id="bat-notice"><option value="edge">Sugli anelli del bordo</option><option value="notification">Con una notifica di Windows</option><option value="off">Non mostrare niente</option></select></label>
+              <label class="switch inline"><input type="checkbox" id="bat-sound"><span></span>Con un suono</label>
+              <label class="switch inline"><input type="checkbox" id="bat-bt"><span></span>Includi i dispositivi Bluetooth (controller, auricolari…)</label>
+              <label class="switch inline"><input type="checkbox" id="bat-phone"><span></span>Includi il telefono collegato</label>
+              <p class="muted">Unico legge solo quello che Windows e le periferiche già sanno: se un valore manca scrive "Nessun dato", mai 0%.</p>
+            </div>
+          </div>
+          <div class="two">
+            <div class="card glass">
               <h3>Luci automatiche</h3>
               <div class="row"><label class="switch inline"><input type="checkbox" id="la-idle"><span></span>Spegnile quando non usi il PC da</label><select id="la-min"><option value="5">5 min</option><option value="10">10 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="60">1 ora</option></select></div>
               <div class="row"><label class="switch inline"><input type="checkbox" id="la-night"><span></span>Spegnile di notte, dalle</label><input type="time" id="la-from"><span>alle</span><input type="time" id="la-to"></div>
@@ -649,5 +667,6 @@
   <script src="extra.js"></script>
   <script src="more.js"></script>
   <script src="more2.js"></script>
+  <script src="batteries.js"></script>
 </body>
 </html>
