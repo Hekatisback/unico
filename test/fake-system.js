@@ -28,6 +28,10 @@ class FakeSystem {
     if (this.history.length > 120) this.history.shift();
     this.onTick(s);
   }
+  async audioCheck(ids) { return { apo: Object.fromEntries(ids.map((i) => [i, false])), privacy: { machine: 'Allow', user: 'Allow', desktop: 'Allow' } }; }
+  async audioSetDefault() { return true; }
+  async audioSetDeviceVolume() { return true; }
+  async audioSetDeviceMute() { return true; }
   async btBattery() { return [{ name: 'Xbox Wireless Controller', battery: 34, cls: 'HIDClass', connected: true }]; }
   async fullscreen() { return 0; }
   async procs() {
@@ -67,11 +71,11 @@ class FakeSystem {
   async suspend() { return true; }
   async audioDevices(flow) {
     if (flow === 'capture') return [
-      { id: 'mic-hs80', name: 'Microfono (CORSAIR HS80 RGB Wireless)', volume: 82, muted: false, isDefault: true, peak: 12 },
+      { id: 'mic-hs80', name: 'Microfono (CORSAIR HS80 RGB Wireless)', volume: 82, muted: false, isDefault: true, isDefaultComm: true, peak: 12 },
       { id: 'mic-int', name: 'Gruppo microfoni (Realtek)', volume: 70, muted: false, isDefault: false, peak: 0 },
     ];
     return [
-      { id: 'out-hs80', name: 'Cuffie (CORSAIR HS80 RGB Wireless)', volume: 46, muted: false, isDefault: true, peak: 38 },
+      { id: 'out-hs80', name: 'Cuffie (CORSAIR HS80 RGB Wireless)', volume: 46, muted: false, isDefault: true, isDefaultComm: false, peak: 38 },
       { id: 'out-spk', name: 'Altoparlanti (Realtek)', volume: 70, muted: false, isDefault: false, peak: 0 },
       { id: 'out-phl', name: 'PHL 273V7 (NVIDIA High Definition Audio)', volume: 100, muted: false, isDefault: false, peak: 0 },
     ];

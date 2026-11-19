@@ -310,6 +310,7 @@ function push() {
   const mini = feat2.miniWin && feat2.miniWin();
   if (mini && !mini.isDestroyed()) mini.webContents.send('state', state);
   if (feat2.batteries) feat2.batteries.update(); else updateTray();
+  if (!MOCK) onHeadsetMaybeOn();
 }
 
 async function refresh(which = ['mouse', 'headset', 'keyboard']) {
@@ -531,6 +532,51 @@ async function eqWrite(gains, enabled) {
   return apo.apply(gains, enabled, enabled ? await hs80OutputGuid() : null);
 }
 
+// --- Audio e microfono delle cuffie (senza iCUE) --------------------------------
+const audioCheck = require('./system/audiocheck');
+const ICUE_PATHS = ['Corsair iCUE5 Software', 'Corsair iCUE4 Software', 'CORSAIR iCUE 4 Software', 'CORSAIR iCUE Software'].map((d) => path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Corsair', d, 'iCUE.exe'));
+const icueInstalled = () => !MOCK && ICUE_PATHS.some((p) => { try { return fs.existsSync(p); } catch (e) { return false; } });
+async function headsetAudioCheck() {
+  const [render, capture] = await Promise.all([sys.audioDevices('render'), sys.audioDevices('capture')]);
+  const ids = [...render, ...capture].filter(audioCheck.isHs80).map((d) => d.id);
+  let extra = {};
+  try { extra = await sys.audioCheck(ids); } catch (e) { log(`audio cuffie: ${e.message}`); }
+  return audioCheck.analyze({ render, capture, extra, hw: state.headset || {}, icue: { installed: icueInstalled(), running: !!icueOpen } });
+}
+async function headsetAudioFix() {
+  const before = await headsetAudioCheck();
+  const steps = audioCheck.fixPlan(before);
+  for (const st of steps) {
+    try {
+      if (st.op === 'default') await sys.audioSetDefault(st.id, true);
+      if (st.op === 'mute') await sys.audioSetDeviceMute(st.id, st.mute);
+      if (st.op === 'volume') await sys.audioSetDeviceVolume(st.id, st.volume);
+      log(`audio cuffie: ${st.op} ${st.id}${st.volume != null ? ' ' + st.volume : ''}${st.mute != null ? ' mute=' + st.mute : ''}`);
+    } catch (e) { log(`audio cuffie: ${st.op} non riuscito ${e.message}`); }
+  }
+  const after = await headsetAudioCheck();
+  return { ok: true, done: steps.length, ...after };
+}
+// Quando le cuffie si accendono: se qualcosa non va (microfono silenziato, audio altrove) lo dice una volta.
+let audioWarned = false, headsetWasOn = false;
+async function onHeadsetMaybeOn() {
+  const on = !!(state.headset && state.headset.connected && !state.headset.off && !state.headset.managed);
+  if (on && !headsetWasOn) setTimeout(async () => {
+    try {
+      const r = await headsetAudioCheck();
+      const bad = r.items.filter((i) => !i.ok && i.key !== 'icue');
+      if (bad.length && !audioWarned && Notification.isSupported()) {
+        audioWarned = true;
+        const n = new Notification({ title: 'Cuffie: audio o microfono da sistemare', body: `${bad[0].title}: ${bad[0].detail}${bad.length > 1 ? ` (e altri ${bad.length - 1})` : ''} Clicca per aprire Unico.`, icon: iconPath() });
+        n.on('click', () => { showWindow(); if (win) win.webContents.send('goto', 'audio:mic'); });
+        n.show();
+      }
+      if (!bad.length) audioWarned = false;
+    } catch (e) { log(`audio cuffie (controllo all'accensione): ${e.message}`); }
+  }, 4000);
+  headsetWasOn = on;
+}
+
 // iCUE aperto = le cuffie sono sue
 let icueOpen = null;
 async function checkIcue(names) {
@@ -549,6 +595,9 @@ const handle = (name, fn) => ipcMain.handle(name, async (_e, arg) => {
 
 handle('state:get', async () => ({ state, settings, meta: { modes: MODES, sleep: SLEEP, eqBands: apo.BANDS, eqPresets: apo.PRESETS, version: app.getVersion(), micaSupported, platform: process.platform } }));
 handle('state:refresh', async (which) => refresh(which));
+handle('headsetAudio:check', async () => headsetAudioCheck());
+handle('headsetAudio:fix', async () => headsetAudioFix());
+handle('headsetAudio:privacy', async () => { shell.openExternal('ms-settings:privacy-microphone'); return { ok: true }; });
 
 handle('mouse:apply', async (change) => {
   const r = await mouse.apply(change);
@@ -814,6 +863,10 @@ async function captureV28(dir) {
   await wait(1500);
   fs.writeFileSync(path.join(dir, 'settings.png'), (await win.webContents.capturePage()).toPNG());
   fs.writeFileSync(path.join(dir, 'list.json'), JSON.stringify(B.list(), null, 1));
+  await win.webContents.executeJavaScript(`document.querySelector('nav button[data-page="audio"]').click(); setTimeout(() => document.querySelector('[data-tabs="audio"] button[data-tab="mic"]').click(), 400);`);
+  await wait(3500);
+  fs.writeFileSync(path.join(dir, 'audio-mic.png'), (await win.webContents.capturePage()).toPNG());
+  fs.writeFileSync(path.join(dir, 'audiocheck.json'), JSON.stringify(await headsetAudioCheck(), null, 1));
   quitting = true;
   app.quit();
 }

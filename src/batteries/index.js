@@ -193,10 +193,12 @@ function setup(ctx) {
     if (b.edge === 'off' || !list.length || fullscreen || ctx.gameRunning()) return false;
     return b.edge === 'always' || Date.now() < edgeUntil;
   }
-  function flashEdge(reason, ids = []) {
+  async function flashEdge(reason, ids = []) {
     if (B().edge === 'off') return;
     edgeReason = reason; edgeHighlight = ids;
     edgeUntil = Date.now() + 6000;
+    // prima di comparire controlla lo schermo intero, così non si affaccia nemmeno per un istante sopra un gioco
+    if (!MOCK && sys.fullscreen && reason !== 'test') { try { fullscreen = (await sys.fullscreen()) === 1; } catch (e) {} }
     syncEdge();
     clearTimeout(edgeTimer);
     edgeTimer = setTimeout(syncEdge, 6100);

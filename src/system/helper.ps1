@@ -328,6 +328,32 @@ function Get-BtBattery {
   return ,$out.ToArray()
 }
 
+# ---------------------------------------------------------------- audio cuffie: filtri e permessi
+# Solo letture dal registro: Equalizer APO installato su un dispositivo (il suo CLSID nelle FxProperties)
+# e il permesso microfono di Windows (Privacy e sicurezza -> Microfono).
+function Get-AudioCheck($ids) {
+  $apoClsid = '{EACD2258-FCAC-4FF4-B36D-419E924A6D79}'
+  $apo = @{}
+  foreach ($id in @($ids)) {
+    $sid = [string]$id
+    $guid = if ($sid -match '(\{[0-9a-fA-F-]{36}\})$') { $Matches[1] } else { $null }
+    if (-not $guid) { continue }
+    $flow = if ($sid.Length -gt 7 -and $sid.Substring(1, 6) -eq '0.0.1.') { 'Capture' } else { 'Render' }
+    $hit = $false
+    try {
+      $p = Get-ItemProperty -LiteralPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\$flow\$guid\FxProperties" -ErrorAction Stop
+      foreach ($v in $p.PSObject.Properties) { if ("$($v.Value)" -like "*$apoClsid*") { $hit = $true } }
+    } catch {}
+    $apo[$sid] = $hit
+  }
+  $base = 'Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone'
+  $val = { param($k) try { (Get-ItemProperty -LiteralPath $k -Name Value -ErrorAction Stop).Value } catch { $null } }
+  return @{
+    apo = $apo
+    privacy = @{ machine = (& $val "HKLM:\$base"); user = (& $val "HKCU:\$base"); desktop = (& $val "HKCU:\$base\NonPackaged") }
+  }
+}
+
 # ---------------------------------------------------------------- schermo intero
 # Schermo intero vero: la finestra in primo piano copre tutto il suo monitor (e non è il desktop),
 # oppure Windows segnala un gioco Direct3D esclusivo (3) o la modalità presentazione (4).
@@ -393,6 +419,7 @@ while ($true) {
       'setBrightness' { Set-Brightness $a.id $a.value }
       'suspend' { Invoke-Suspend }
       'btBattery' { Get-BtBattery }
+      'audioCheck' { Get-AudioCheck $a.ids }
       'fullscreen' { Get-Fullscreen }
       'audioDevices' { Get-AudioDevices $a.flow }
       'audioSessions' { Get-AudioSessions }

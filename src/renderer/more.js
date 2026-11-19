@@ -44,8 +44,8 @@ let auDragging = false;
 function deviceRow(d, flow) {
   return `<div class="au-row ${d.isDefault ? 'on' : ''}" data-id="${esc(d.id)}" data-flow="${flow}">
     <button class="au-pick" title="Usa questo">${flow === 'capture' ? ICON.mic : ICON.speaker}<span><b>${esc(d.name.replace(/\s*\(.*\)$/, ''))}</b><small>${esc((d.name.match(/\((.*)\)$/) || [])[1] || kindOf(d.name))}${d.isDefault ? ' · in uso' : ''}</small></span></button>
-    ${flow === 'capture' ? `<span class="au-mute-state ${d.muted ? 'muted' : ''}" title="${d.muted ? 'Silenziato in Windows' : 'Attivo'}">${d.muted ? ICON.micOff : ICON.mic}</span>` : `<button class="icon-btn au-mute ${d.muted ? 'muted' : ''}" title="${d.muted ? 'Riattiva' : 'Silenzia'}">${d.muted ? ICON.mute : ICON.speaker}</button>`}
-    <input type="range" min="0" max="100" value="${d.volume}" class="au-vol"${flow === 'capture' ? ' disabled' : ''}><b class="au-pct">${d.volume}%</b>
+    <button class="icon-btn au-mute ${d.muted ? 'muted' : ''}" title="${d.muted ? 'Riattiva' : 'Silenzia'}">${flow === 'capture' ? (d.muted ? ICON.micOff : ICON.mic) : d.muted ? ICON.mute : ICON.speaker}</button>
+    <input type="range" min="0" max="100" value="${d.volume}" class="au-vol"><b class="au-pct">${d.volume}%</b>
     <div class="meter"><div data-w="${d.peak || 0}"></div></div>
   </div>`;
 }
@@ -101,7 +101,6 @@ tabHooks.audio = () => setTimeout(loadAudio, 0);
   el.addEventListener('click', async (e) => {
     const row = e.target.closest('.au-row');
     if (!row) return;
-    if (row.dataset.flow === 'capture') return; // il microfono non si tocca da Unico
     if (e.target.closest('.au-pick') && row.dataset.id && !row.classList.contains('on')) {
       await act(null, () => api.audioSetDefault(row.dataset.id), 'Dispositivo cambiato');
       el.dataset.ids = ''; loadAudio();

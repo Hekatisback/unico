@@ -397,10 +397,15 @@
           </div>
         </div>
         <div class="tab" data-tab="mic">
+          <div class="card glass" id="ha-card">
+            <div class="card-head"><div><h3>Cuffie HS80: audio e microfono</h3><p class="muted">Controlla tutto quello che serve perché audio e microfono delle cuffie funzionino senza iCUE. Unico cambia solo impostazioni di Windows, mai le cuffie.</p></div>
+              <div class="row"><button class="btn ghost small" id="ha-check">Ricontrolla</button><button class="btn primary small" id="ha-fix">Sistema</button></div></div>
+            <ul class="ha-list" id="ha-list"><li class="muted">Caricamento…</li></ul>
+          </div>
           <div class="two">
             <div class="card glass">
               <h3>Microfono in uso</h3>
-              <p class="muted">Solo da vedere: Unico non cambia mai il microfono. Per cambiarlo usa le impostazioni audio di Windows o iCUE.</p>
+              <p class="muted">Tocca un microfono per usarlo in tutte le app (anche nelle chiamate). Il volume e il silenziamento sono quelli di Windows.</p>
               <div id="au-mic" class="au-list"><p class="muted">Caricamento…</p></div>
             </div>
             <div class="card glass">
@@ -668,5 +673,6 @@
   <script src="more.js"></script>
   <script src="more2.js"></script>
   <script src="batteries.js"></script>
+  <script src="headset-audio.js"></script>
 </body>
 </html>

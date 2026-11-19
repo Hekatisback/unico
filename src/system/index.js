@@ -290,6 +290,7 @@ class SystemService {
   brightness() { return this.helper.call('brightness', {}, 15000).then(arr); }
   setBrightness(id, value) { return this.helper.call('setBrightness', { id, value: Math.max(0, Math.min(100, Math.round(value))) }, 8000); }
   suspend() { return this.helper.call('suspend'); }
+  audioCheck(ids) { return this.helper.call('audioCheck', { ids }, 15000); }
   btBattery() { return this.helper.call('btBattery', {}, 30000).then(arr); }
   fullscreen() { return this.helper.call('fullscreen', {}, 5000); }
   // audio
