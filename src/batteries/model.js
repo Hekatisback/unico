@@ -8,6 +8,8 @@ const PERIPHERALS = [
   { key: 'keyboard', kind: 'keyboard', name: 'Tastiera' },
 ];
 
+// Un valore letto più di 6 ore fa non si mostra più come carica attuale.
+const STALE_MAX_MS = 6 * 3600e3;
 const pct = (v) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100 ? Math.round(v) : null);
 
 // Converte stato periferiche + telefono + Bluetooth in voci uniformi.
@@ -23,11 +25,14 @@ function buildList(state, extra = {}, now = Date.now()) {
     if (d.asleep) status = 'standby';
     else if (d.off) status = 'off';
     else if (live == null && p.key === 'keyboard' && d.wired) status = 'wired';
+    const lastAt = d.lastBattery ? d.lastBattery.at : null;
+    const fresh = last != null && lastAt && now - lastAt <= STALE_MAX_MS;
     out.push({
       id: p.key, kind: p.kind, name: p.name,
-      percent: live != null ? live : last,
-      stale: live == null && last != null,
-      at: live != null ? now : d.lastBattery ? d.lastBattery.at : null,
+      percent: live != null ? live : fresh ? last : null,
+      stale: live == null && fresh,
+      old: live == null && last != null && !fresh ? { percent: last, at: lastAt } : null,
+      at: live != null ? now : lastAt,
       charging: d.charging === 'charging' || d.charging === true,
       status,
     });
@@ -66,6 +71,7 @@ function detail(e, now = Date.now()) {
   if (e.status === 'standby') bits.push('In standby');
   if (e.status === 'off') bits.push('Spente');
   if (e.stale && e.at) bits.push(`letto ${ago(now - e.at)}`);
+  if (e.old) bits.push(`ultima lettura ${e.old.percent}%, ${ago(now - e.old.at)}`);
   return bits.join(' · ');
 }
 
@@ -135,4 +141,4 @@ function parseBluetooth(rows) {
   return [...seen.values()];
 }
 
-module.exports = { buildList, sortList, level, COLORS, label, detail, ago, tooltip, weakest, newlyConnected, lowAlerts, btKind, parseBluetooth, pct };
+module.exports = { STALE_MAX_MS, buildList, sortList, level, COLORS, label, detail, ago, tooltip, weakest, newlyConnected, lowAlerts, btKind, parseBluetooth, pct };

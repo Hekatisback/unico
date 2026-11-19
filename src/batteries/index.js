@@ -253,7 +253,8 @@ function setup(ctx) {
   }
 
   handle('batteries:get', async () => payload());
-  handle('batteries:refresh', async () => { await ctx.refreshBatteries(); await refreshExtra(); return payload(); });
+  // periferiche subito; telefono e Bluetooth arrivano dopo (PowerShell e adb possono metterci qualche secondo)
+  handle('batteries:refresh', async () => { await ctx.refreshBatteries(); refreshExtra(); return payload(); });
   handle('batteries:openMain', async () => { if (panel && !panel.isDestroyed()) panel.hide(); ctx.showWindow(); return { ok: true }; });
   handle('batteries:settings', async (patch) => {
     const clean = {};

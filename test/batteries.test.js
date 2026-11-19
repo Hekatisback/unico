@@ -65,3 +65,10 @@ test('Bluetooth: niente doppioni, tipo riconosciuto, scollegati e valori assurdi
   assert.deepStrictEqual(r.map((x) => [x.name, x.kind]), [['Xbox Wireless Controller', 'controller'], ['Galaxy Buds2 Pro', 'headset']]);
   assert.deepStrictEqual(M.parseBluetooth(null), []);
 });
+
+test('lettura vecchia di giorni: niente percentuale, solo nella descrizione', () => {
+  const l = M.buildList({ headset: { connected: true, lastBattery: { percent: 94, at: NOW - 15 * 86400e3 } } }, {}, NOW);
+  assert.strictEqual(l[0].percent, null);
+  assert.strictEqual(M.label(l[0]), 'Nessun dato');
+  assert.match(M.detail(l[0], NOW), /ultima lettura 94%, 15 g fa/);
+});

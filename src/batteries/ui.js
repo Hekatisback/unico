@@ -49,6 +49,7 @@
     if (e.status === 'standby') bits.push('In standby');
     if (e.status === 'off') bits.push('Spente');
     if (e.stale && e.at) bits.push(`letto ${ago(now - e.at)}`);
+    if (e.old) bits.push(`ultima lettura ${e.old.percent}%, ${ago(now - e.old.at)}`);
     if (!bits.length) bits.push(e.kind === 'phone' ? 'Telefono' : e.id.startsWith('bt:') ? 'Bluetooth' : 'Collegato');
     return bits.join(' · ');
   }
