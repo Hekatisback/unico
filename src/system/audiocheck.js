@@ -42,7 +42,7 @@ function analyze({ render = [], capture = [], extra = {}, hw = {}, icue = {} }) 
   add('privacy', !denied, 'Permesso microfono di Windows', denied ? 'In Privacy e sicurezza → Microfono l\'accesso è disattivato: le app non possono usarlo.' : 'Le app possono usare il microfono.', denied ? 'privacy' : null);
 
   if (icue.running) add('icue', false, 'iCUE', 'iCUE è ancora aperto: finché c\'è, Unico lascia le cuffie a lui.');
-  else if (icue.installed) add('icue', true, 'iCUE', 'Installato ma chiuso. Puoi disinstallarlo: Unico gestisce le cuffie al suo posto.');
+  else if (icue.installed) add('icue', true, 'iCUE', 'Installato ma chiuso: le cuffie le gestisce Unico.');
 
   const bad = items.filter((i) => !i.ok);
   return { out, mic, items, ok: bad.length === 0, fixable: bad.some((i) => i.fix && i.fix !== 'privacy') };

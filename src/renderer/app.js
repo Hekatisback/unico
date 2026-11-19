@@ -168,7 +168,7 @@ const OFFLINE = {
     ? ['Il mouse è in standby', ['Muovi il mouse o premi un tasto', 'Poi tocca Riprova']]
     : ['Mouse non trovato', ['Collega il ricevitore HyperSpeed a una porta USB (meglio senza hub)', 'Sotto il mouse, sposta l\'interruttore su 2.4 GHz (non Bluetooth)', 'Chiudi Razer Synapse se è aperto', 'Se continua, Impostazioni → Copia diagnostica e incollala a Claude']],
   headset: (s) => s && s.managed
-    ? ['Le cuffie sono gestite da iCUE', ['iCUE è aperto: per non creare conflitti Unico non manda niente alle cuffie', 'Unico può sostituire iCUE del tutto: chiudilo dall\'icona vicino all\'orologio, oppure disinstallalo da Impostazioni di Windows → App', 'Audio e microfono funzionano anche senza iCUE: Unico → Audio → Microfono li controlla']]
+    ? ['Le cuffie sono gestite da iCUE', ['iCUE è aperto: per non creare conflitti Unico non manda niente alle cuffie', 'Per usare Unico al posto di iCUE chiudilo dall\'icona vicino all\'orologio e toglilo dall\'avvio (Impostazioni di Windows → App → Avvio)', 'Audio e microfono funzionano anche senza iCUE: Unico → Audio → Microfono li controlla']]
     : s && s.off
     ? ['Le cuffie sono spente', ['Il ricevitore è collegato: accendi le cuffie tenendo premuto il tasto di accensione']]
     : s && s.cableOff ? ['Cavo collegato, cuffie spente', ['Accendi le cuffie']]
