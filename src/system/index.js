@@ -31,9 +31,11 @@ class Helper {
       clearTimeout(p.timer);
       if (msg.ok) p.resolve(msg.data); else p.reject(new Error(String(msg.data)));
     });
-    this.proc.stderr.on('data', (d) => this.log(`helper: ${String(d).trim().slice(0, 400)}`));
-    this.proc.on('exit', (code) => {
+    const proc = this.proc;
+    proc.stderr.on('data', (d) => this.log(`helper: ${String(d).trim().slice(0, 400)}`));
+    proc.on('exit', (code) => {
       this.log(`helper: terminato (${code})`);
+      if (this.proc !== proc) return; // già sostituito da un PowerShell nuovo dopo un blocco
       this.proc = null;
       for (const p of this.pending.values()) { clearTimeout(p.timer); p.reject(new Error('helper terminato')); }
       this.pending.clear();
@@ -44,13 +46,26 @@ class Helper {
     this.start();
     const id = ++this.seq;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(id); reject(new Error(`timeout ${cmd}`)); }, timeout);
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`timeout ${cmd}`));
+        // un comando bloccato fermerebbe tutti gli altri in coda: si riavvia PowerShell
+        this.log(`helper: ${cmd} bloccato, riavvio`);
+        this.stop();
+      }, timeout);
       this.pending.set(id, { resolve, reject, timer });
       this.proc.stdin.write(JSON.stringify({ id, cmd, args }) + '\n');
     });
   }
 
-  stop() { if (this.proc) { try { this.proc.kill(); } catch (e) {} this.proc = null; } }
+  stop() {
+    if (!this.proc) return;
+    const p = this.proc; this.proc = null;
+    try { p.kill(); } catch (e) {}
+    // le richieste ancora in coda nel PowerShell fermato non avranno risposta
+    for (const x of this.pending.values()) { clearTimeout(x.timer); x.reject(new Error('helper riavviato')); }
+    this.pending.clear();
+  }
 }
 
 // --------------------------------------------------------------------------- GPU NVIDIA
@@ -291,7 +306,16 @@ class SystemService {
   setBrightness(id, value) { return this.helper.call('setBrightness', { id, value: Math.max(0, Math.min(100, Math.round(value))) }, 8000); }
   suspend() { return this.helper.call('suspend'); }
   audioCheck(ids) { return this.helper.call('audioCheck', { ids }, 15000); }
-  btBattery() { return this.helper.call('btBattery', {}, 30000).then(arr); }
+  // processo separato con limite di tempo: se Windows si blocca, si chiude e basta
+  btBattery() {
+    const script = this.helper.scriptPath.replace(/helper\.ps1$/, 'bt.ps1');
+    return new Promise((resolve, reject) => {
+      execFile('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script], { timeout: 25000, windowsHide: true, maxBuffer: 1024 * 1024 }, (err, out) => {
+        if (err) return reject(new Error(err.killed ? 'timeout Bluetooth' : err.message));
+        try { resolve(arr(JSON.parse(String(out).replace(/^\uFEFF/, '').trim() || '[]'))); } catch (e) { reject(e); }
+      });
+    });
+  }
   fullscreen() { return this.helper.call('fullscreen', {}, 5000); }
   // audio
   audioDevices(flow) { return this.helper.call('audioDevices', { flow: flow === 'capture' ? 1 : 0 }, 15000).then(arr); }
