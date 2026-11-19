@@ -134,7 +134,8 @@ function onStats(s) {
   feat.onSample && feat.onSample(s);
   if (win && !win.isDestroyed() && win.isVisible()) win.webContents.send('stats', { ...s, history: sys.history });
   if (overlayWin && !overlayWin.isDestroyed()) {
-    const bat = (k) => { const d = state[k] || {}; return typeof d.battery === 'number' ? d.battery : d.lastBattery ? d.lastBattery.percent : null; };
+    // come nel pannello delle batterie: una lettura più vecchia di 6 ore non è più la carica attuale
+    const bat = (k) => { const d = state[k] || {}; return typeof d.battery === 'number' ? d.battery : d.lastBattery && Date.now() - d.lastBattery.at <= 6 * 3600e3 ? d.lastBattery.percent : null; };
     overlayWin.webContents.send('stats', { ...s, fps: feat2.fpsNow ? feat2.fpsNow() : null, devices: { mouse: bat('mouse'), headset: bat('headset') } });
   }
   const mini = feat2.miniWin && feat2.miniWin();

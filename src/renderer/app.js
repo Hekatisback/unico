@@ -150,6 +150,16 @@ $('#refresh').onclick = async () => {
 // =============================================================================
 // Rendering
 // =============================================================================
+// "alle 22:27" se è di oggi, "ieri alle 22:27", altrimenti "il 4 nov alle 22:27"
+function whenRead(at) {
+  const d = new Date(at), now = new Date();
+  const hm = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 86400000);
+  if (diff === 0) return `alle ${hm}`;
+  if (diff === 1) return `ieri alle ${hm}`;
+  return `il ${d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} alle ${hm}`;
+}
 const batteryColor = (p) => (p > 50 ? 'var(--ok)' : p > 15 ? 'var(--warn)' : 'var(--bad)');
 const online = (s) => s && s.connected && !s.asleep && !s.off && !s.managed;
 
@@ -180,7 +190,7 @@ function renderEmpty(k, s) {
 function summary(k, s) {
   if (!s || !s.connected) return k === 'headset' && s && s.cableOff ? 'Cavo collegato, cuffie spente' : 'Non collegato';
   if (s.managed) return `Gestite da ${s.managed}`;
-  if (s.asleep) return s.lastBattery ? `In standby · ultima lettura alle ${new Date(s.lastBattery.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : 'In standby';
+  if (s.asleep) return s.lastBattery ? `In standby · ultima lettura ${whenRead(s.lastBattery.at)}` : 'In standby';
   if (s.off) return 'Cuffie spente';
   const p = [];
   if (k === 'mouse') { if (s.dpi) p.push(`${s.dpi} DPI`); if (s.pollRate) p.push(`${s.pollRate} Hz`); }
@@ -194,7 +204,7 @@ function render() {
     const s = S[k];
     const ring = $(`#ring-${k}`);
     const has = s && typeof s.battery === 'number';
-    const lb = !has && s && s.lastBattery && Date.now() - s.lastBattery.at < 3 * 86400000 ? s.lastBattery : null;
+    const lb = !has && s && s.lastBattery && Date.now() - s.lastBattery.at < 6 * 3600e3 ? s.lastBattery : null;
     const pct = has ? s.battery : lb ? lb.percent : null;
     ring.style.setProperty('--p', pct != null ? pct : 0);
     ring.style.setProperty('--c', pct != null ? batteryColor(pct) : 'transparent');

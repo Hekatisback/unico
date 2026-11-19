@@ -8,7 +8,7 @@ function renderState(st) {
     const d = st[k] || {};
     const el = $(`#b-${k}`);
     const has = typeof d.battery === 'number';
-    const p = has ? d.battery : d.lastBattery ? d.lastBattery.percent : null;
+    const p = has ? d.battery : d.lastBattery && Date.now() - d.lastBattery.at <= 6 * 3600e3 ? d.lastBattery.percent : null;
     const label = !d.connected ? 'Assente' : d.asleep ? 'Standby' : d.off ? 'Spente' : p == null ? (k === 'keyboard' && d.wired ? 'Cavo' : 'OK') : `${p}%`;
     el.querySelector('b').textContent = label;
     el.classList.toggle('stale', !has && p != null);
