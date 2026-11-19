@@ -65,9 +65,11 @@ function setup(ctx) {
     if (!B().bluetooth) return [];
     if (MOCK) return M.parseBluetooth([{ name: 'Xbox Wireless Controller', battery: 34, cls: 'HIDClass', connected: true }, { name: 'Galaxy Buds2 Pro', battery: 80, cls: 'AudioEndpoint', connected: true }]);
     if (!sys.btBattery) return [];
-    try { return M.parseBluetooth(await sys.btBattery()); } catch (e) { log(`bluetooth batteria: ${e.message}`); return extra.bluetooth; }
+    if (btFails >= 3 && Date.now() - btLast < 15 * 60000) return extra.bluetooth;
+    btLast = Date.now();
+    try { const r = M.parseBluetooth(await sys.btBattery()); btFails = 0; return r; } catch (e) { btFails++; log(`bluetooth batteria: ${e.message}`); return extra.bluetooth; }
   }
-  let extraBusy = false;
+  let extraBusy = false, btFails = 0, btLast = 0;
   async function refreshExtra({ bt = true } = {}) {
     if (extraBusy) return;
     extraBusy = true;

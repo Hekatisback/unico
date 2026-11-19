@@ -21,7 +21,8 @@ function analyze({ render = [], capture = [], extra = {}, hw = {}, icue = {} }) 
   if (out) {
     add('outDefault', out.isDefault && out.isDefaultComm, 'Audio nelle cuffie',
       out.isDefault && out.isDefaultComm ? 'Le cuffie sono l\'uscita audio di Windows, anche per le chiamate.' : out.isDefault ? 'Le chiamate (Discord, Teams) escono da un altro dispositivo.' : 'Windows sta facendo uscire l\'audio da un altro dispositivo.', 'outDefault');
-    add('outMuted', !out.muted, 'Audio non silenziato', out.muted ? 'L\'uscita delle cuffie è silenziata in Windows.' : 'Volume ' + out.volume + '%.', 'outMuted');
+    add('outMuted', !out.muted, 'Audio non silenziato', out.muted ? 'L\'uscita delle cuffie è silenziata in Windows.' : 'Non silenziato.', 'outMuted');
+    add('outVolume', out.volume >= 5, 'Volume delle cuffie', out.volume >= 5 ? `${out.volume}%.` : `${out.volume}%: non senti niente.`, 'outVolume');
   } else add('out', false, 'Uscita audio delle cuffie', 'Windows non vede l\'uscita audio delle cuffie.');
 
   if (mic) {
@@ -53,6 +54,7 @@ function fixPlan(result) {
   const bad = new Set(result.items.filter((i) => !i.ok && i.fix).map((i) => i.fix));
   if (result.out && bad.has('outDefault')) steps.push({ op: 'default', id: result.out.id });
   if (result.out && bad.has('outMuted')) steps.push({ op: 'mute', id: result.out.id, mute: false });
+  if (result.out && bad.has('outVolume')) steps.push({ op: 'volume', id: result.out.id, volume: 40 });
   if (result.mic && bad.has('micDefault')) steps.push({ op: 'default', id: result.mic.id });
   if (result.mic && bad.has('micMuted')) steps.push({ op: 'mute', id: result.mic.id, mute: false });
   if (result.mic && bad.has('micVolume')) steps.push({ op: 'volume', id: result.mic.id, volume: 80 });

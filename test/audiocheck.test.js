@@ -53,3 +53,8 @@ test('iCUE installato ma chiuso: solo un consiglio', () => {
   assert.ok(r.ok);
   assert.ok(r.items.find((i) => i.key === 'icue').ok);
 });
+
+test('cuffie a volume 0: riportate al 40%', () => {
+  const r = analyze({ render: [{ ...OUT, volume: 0, muted: true }], capture: [MIC] });
+  assert.deepStrictEqual(fixPlan(r), [{ op: 'mute', id: OUT.id, mute: false }, { op: 'volume', id: OUT.id, volume: 40 }]);
+});
