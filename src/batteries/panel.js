@@ -16,7 +16,8 @@ function render(p) {
       </div>`).join('');
   }
   const low = p.list.filter((e) => e.percent != null && e.percent <= p.low && !e.charging).length;
-  $('#foot').textContent = low ? `${low} da ricaricare` : p.list.length ? 'Tutto a posto' : '';
+  const known = p.list.some((e) => e.percent != null);
+  $('#foot').textContent = low ? `${low} da ricaricare` : known ? 'Tutto a posto' : p.list.length ? 'Nessuna lettura recente' : '';
 }
 
 api.batteriesGet().then(render);
