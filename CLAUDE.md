@@ -28,6 +28,7 @@ senza gergo tecnico: spesso non è uno sviluppatore.
 | `src/remote/` | controllo dal telefono (server nella rete locale) |
 | `src/renderer/` | interfaccia (HTML/CSS/JS senza framework), una pagina per periferica |
 | `test/` | test (`npm test`) e simulatori: `fake-hid.js` (periferiche), `fake-system.js` (Windows) |
+| `tools/rileva-*.{js,ps1}` | rilevamento delle periferiche del PC (solo letture) |
 | `.github/workflows/release.yml` | build e pubblicazione quando cambia la versione in `package.json` |
 
 Un driver espone almeno `status()` e `battery()`, che restituiscono
@@ -37,13 +38,44 @@ questo stato. Se una periferica non c'è, la sua pagina mostra "non trovato" e i
 
 ## Adattare Unico a periferiche diverse (es. per un amico)
 
+### Procedura automatica
+
+Se l'utente chiede di adattare Unico al suo PC, **procedi da solo dall'inizio alla fine**, senza
+chiedergli modelli, codici o conferme intermedie. Le periferiche le trovi tu:
+
+1. `npm ci`, poi esegui i due rilevamenti (solo letture, non cambiano niente):
+   - `node tools/rileva-hid.js --json`: dispositivi HID con VID:PID, usage page e interfacce;
+   - `powershell -NoProfile -ExecutionPolicy Bypass -File tools\rileva-periferiche.ps1`: nomi
+     Windows, uscite e microfoni audio, Bluetooth con batteria, programmi dei produttori installati o
+     aperti, Equalizer APO.
+2. Riconosci ogni periferica dal VID:PID e dal nome (database usb.ids, siti dei progetti open source).
+   Ignora hub, webcam, lettori, touchpad e componenti interni del portatile.
+3. Per ciascuna cerca un protocollo **verificato per quel modello esatto** nelle fonti elencate sotto e
+   decidi tu: driver con solo letture (batteria, stato), driver con anche impostazioni, oppure niente.
+   Nel dubbio: solo letture, oppure niente.
+4. Togli le periferiche di Hekat che non ci sono, scrivi i driver nuovi, aggiorna pagine, simulatore e
+   test, prova tutto come descritto sotto, aggiorna questo file e pubblica.
+5. Alla fine scrivi all'utente, in italiano semplice: cosa hai trovato, cosa ora funziona e cosa no, e
+   perché.
+
+Coinvolgi l'utente **solo** quando non puoi farne a meno, e chiedigli una cosa per volta:
+- l'accesso a GitHub per fare il fork e pubblicare (una volta sola, es. `gh auth login`);
+- le finestre di Windows che chiedono "Sì" o "Consenti" (amministratore, firewall);
+- l'installazione di Unico e le prove fisiche sulla periferica vera ("accendi le cuffie", "muovi il
+  mouse"), guardando poi il log in Opzioni → Diagnostica → Copia diagnostica.
+
+Se il programma del produttore è aperto, non chiudere e non disinstallare niente: Unico si fa da parte
+finché è aperto, e l'utente decide da sé se smettere di usarlo.
+
+### I passaggi in dettaglio
+
 1. **Fai un fork** del repository nel proprio account GitHub.
 2. In `package.json` → `build.publish` metti **owner e repo del fork**. È obbligatorio: altrimenti
    l'app installata si aggiorna dalle release di Hekat e perde le modifiche.
 3. Nel fork attiva GitHub Actions (nei fork è spento) e, in Settings → Actions → General → Workflow
    permissions, scegli **Read and write**: serve per pubblicare le release.
-4. Fatti dire i modelli esatti e fatti incollare la diagnostica di Unico (Opzioni → Diagnostica →
-   Copia diagnostica): contiene VID:PID e usage page di ogni dispositivo HID collegato.
+4. Rileva le periferiche con gli script in `tools/` (vedi sopra). Se non puoi eseguirli sul PC
+   dell'utente, la stessa lista c'è in Unico: Opzioni → Diagnostica → Copia diagnostica.
 5. Per ogni periferica nuova scegli:
    - **non supportarla**: lascia che la pagina dica "non trovato", oppure nascondi la pagina;
    - **supportarla**: scrivi un driver in `src/devices/` sul modello di quelli esistenti, poi collegalo
